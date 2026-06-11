@@ -21,8 +21,11 @@ export default function App() {
   }, [])
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-gray-400 text-sm">Loading...</p>
+    <div className="min-h-screen flex items-center justify-center bg-emerald-50">
+      <div className="text-center">
+        <div className="text-2xl font-bold text-emerald-700 mb-2">StudyBuddy</div>
+        <div className="text-sm text-gray-400">Loading...</div>
+      </div>
     </div>
   )
 
