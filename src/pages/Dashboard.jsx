@@ -32,11 +32,6 @@ function daysUntil(dateStr) {
   return diff
 }
 
-function handleExportPDF(subject) {
-  const subjectSubtopics = subtopics.filter(s => s.subject_id === subject.id)
-  exportSubjectPDF(subject, subjectSubtopics, [])
-}
-
 function urgencyScore(subject, progress) {
   const days = daysUntil(subject.exam_date)
   if (days <= 0) return 0
@@ -214,7 +209,6 @@ export default function Dashboard({ session }) {
   const [retrySubject, setRetrySubject] = useState(null)
   const [retrySubtopic, setRetrySubtopic] = useState(null)
   const [streak, setStreak] = useState(0)
-  
 
   useEffect(() => {
     fetchData()
@@ -222,6 +216,13 @@ export default function Dashboard({ session }) {
 
   async function fetchData() {
     setLoading(true)
+
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single()
+    setProfile(profileData)
 
     const { data: subjectsData } = await supabase
       .from('subjects')
@@ -241,14 +242,6 @@ export default function Dashboard({ session }) {
       .select('study_date')
       .eq('user_id', session.user.id)
     setStreak(calculateStreak(streakData?.map(s => s.study_date) || []))
-
-    const { data: quizData } = await supabase
-      .from('quiz_results')
-      .select('*')
-      .eq('user_id', session.user.id)
-    setAllQuizResults(quizData || [])
-
-    setLoading(false)
 
     setLoading(false)
   }
@@ -686,12 +679,6 @@ function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddS
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => onExport(subject)}
-                      className="text-xs text-gray-400 hover:text-emerald-600 border border-gray-200 hover:border-emerald-300 px-3 py-1.5 rounded-lg transition-colors"
-                    >
-                      Export PDF
-                    </button>
                     <button
                       onClick={() => onEdit(subject)}
                       className="text-xs text-gray-400 hover:text-emerald-600 border border-gray-200 hover:border-emerald-300 px-3 py-1.5 rounded-lg transition-colors"
