@@ -1,3 +1,4 @@
+import { BrainCircuit } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useCallback } from 'react'
 import { sendMessage } from '../lib/gemini'
@@ -115,7 +116,7 @@ export default function TutorPage({ subject, subtopic, studentProfile, onBack, o
           <div key={i} className={`mb-4 flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             {msg.role === 'ai' && (
               <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0 mr-3 mt-1">
-                <span className="text-white text-xs font-bold">AI</span>
+                <BrainCircuit size={14} strokeWidth={2} className="text-white" />
               </div>
             )}
             <div className={`max-w-xl px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
@@ -131,7 +132,7 @@ export default function TutorPage({ subject, subtopic, studentProfile, onBack, o
         {loading && (
           <div className="flex justify-start mb-4">
             <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0 mr-3 mt-1">
-              <span className="text-white text-xs font-bold">AI</span>
+              <BrainCircuit size={14} strokeWidth={2} className="text-white" />
             </div>
             <div className="bg-white border border-emerald-100 px-4 py-3 rounded-2xl rounded-tl-sm">
               <div className="flex gap-1 items-center h-5">

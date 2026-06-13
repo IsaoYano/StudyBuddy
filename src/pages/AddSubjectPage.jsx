@@ -1,13 +1,20 @@
+import {
+  Brain,
+  Laptop,
+  BookOpenText,
+  Handshake,
+  Microscope,
+} from 'lucide-react'
 import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { extractSubtopicsFromText, readPDFText } from '../lib/slideReader'
 
 const SUBJECT_TYPES = [
-  { value: 'neuroscience', label: 'Neuroscience / Biological', icon: '🧠' },
-  { value: 'computational', label: 'Computational / Programming', icon: '💻' },
-  { value: 'psychological', label: 'Psychological / Theoretical', icon: '📖' },
-  { value: 'social', label: 'Social / Applied', icon: '🤝' },
-  { value: 'research', label: 'Research Methods', icon: '🔬' },
+  { value: 'neuroscience', label: 'Neuroscience / Biological', icon: <Brain size={20} strokeWidth={2} className="text-violet-500" /> },
+  { value: 'computational', label: 'Computational / Programming', icon: <Laptop size={20} strokeWidth={2} className="text-blue-500" /> },
+  { value: 'psychological', label: 'Psychological / Theoretical', icon: <BookOpenText size={20} strokeWidth={2} className="text-amber-500" /> },
+  { value: 'social', label: 'Social / Applied', icon: <Handshake size={20} strokeWidth={2} className="text-pink-500" /> },
+  { value: 'research', label: 'Research Methods', icon: <Microscope size={20} strokeWidth={2} className="text-teal-500" /> },
 ]
 
 export default function AddSubjectPage({ session, onBack, onSaved }) {
@@ -182,7 +189,9 @@ export default function AddSubjectPage({ session, onBack, onSaved }) {
                       : 'border-gray-200 hover:border-emerald-200 text-gray-600'
                   }`}
                 >
-                  <span className="text-lg">{type.icon}</span>
+                  <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-50">
+                    {type.icon}
+                  </span>
                   <span className="text-sm font-medium">{type.label}</span>
                   {subjectType === type.value && (
                     <span className="ml-auto text-emerald-500 text-xs font-semibold">Selected</span>

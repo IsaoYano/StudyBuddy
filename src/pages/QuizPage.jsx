@@ -1,11 +1,31 @@
+import {
+  ListChecks,
+  PencilLine,
+  FileText,
+} from 'lucide-react'
 import { useState } from 'react'
 import { generateQuiz, evaluateAnswer } from '../lib/quiz'
 import { supabase } from '../lib/supabase'
 
 const QUIZ_TYPES = [
-  { value: 'mcq', label: 'Multiple Choice', desc: '5 questions with 4 options each', emoji: '🔤' },
-  { value: 'structured', label: 'Structured', desc: '3 questions requiring written answers', emoji: '✏️' },
-  { value: 'essay', label: 'Essay', desc: '1 deep question requiring a detailed response', emoji: '📝' },
+  {
+    value: 'mcq',
+    label: 'Multiple Choice',
+    desc: '5 questions with 4 options each',
+    icon: <ListChecks size={22} strokeWidth={2} className="text-emerald-600" />,
+  },
+  {
+    value: 'structured',
+    label: 'Structured',
+    desc: '3 questions requiring written answers',
+    icon: <PencilLine size={22} strokeWidth={2} className="text-blue-500" />,
+  },
+  {
+    value: 'essay',
+    label: 'Essay',
+    desc: '1 deep question requiring a detailed response',
+    icon: <FileText size={22} strokeWidth={2} className="text-amber-500" />,
+  },
 ]
 
 const DIFFICULTIES = [
@@ -174,7 +194,9 @@ export default function QuizPage({ subject, subtopic, session, onBack, onComplet
                         : 'border-gray-200 hover:border-emerald-200'
                     }`}
                   >
-                    <span className="text-2xl">{type.emoji}</span>
+                    <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-gray-50">
+                      {type.icon}
+                    </span>
                     <div>
                       <div className="text-sm font-semibold text-gray-800">{type.label}</div>
                       <div className="text-xs text-gray-400">{type.desc}</div>

@@ -1,3 +1,16 @@
+import {
+  LayoutDashboard,
+  BookOpen,
+  History,
+  Settings,
+  LogOut,
+  Brain,
+  Laptop,
+  BookOpenText,
+  Handshake,
+  Microscope,
+  BookMarked,
+} from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import AddSubjectPage from './AddSubjectPage'
@@ -31,14 +44,15 @@ function urgencyColor(days) {
 }
 
 function typeIcon(type) {
+  const props = { size: 18, strokeWidth: 2 }
   const icons = {
-    neuroscience: '🧠',
-    computational: '💻',
-    psychological: '📖',
-    social: '🤝',
-    research: '🔬',
+    neuroscience: <Brain {...props} className="text-violet-500" />,
+    computational: <Laptop {...props} className="text-blue-500" />,
+    psychological: <BookOpenText {...props} className="text-amber-500" />,
+    social: <Handshake {...props} className="text-pink-500" />,
+    research: <Microscope {...props} className="text-teal-500" />,
   }
-  return icons[type] || '📚'
+  return icons[type] || <BookMarked {...props} className="text-gray-400" />
 }
 
 function Sidebar({ page, setPage, profile, session, handleLogout }) {
@@ -70,9 +84,9 @@ function Sidebar({ page, setPage, profile, session, handleLogout }) {
 
       <nav className="flex-1 p-3 flex flex-col gap-1">
         {[
-          { id: 'dashboard', label: 'Dashboard', emoji: '🏠' },
-          { id: 'subjects', label: 'My subjects', emoji: '📚' },
-          { id: 'history', label: 'History', emoji: '📊' },
+          { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} strokeWidth={2} /> },
+          { id: 'subjects', label: 'My subjects', icon: <BookOpen size={18} strokeWidth={2} /> },
+          { id: 'history', label: 'History', icon: <History size={18} strokeWidth={2} /> },
         ].map(item => (
           <button
             key={item.id}
@@ -83,10 +97,12 @@ function Sidebar({ page, setPage, profile, session, handleLogout }) {
                 : 'text-gray-500 hover:bg-gray-50'
             }`}
           >
-            <span>{item.emoji}</span>
-            {item.label}
-          </button>
-        ))}
+            <span className={page === item.id ? 'text-emerald-600' : 'text-gray-400'}>
+              {item.icon}
+            </span>
+              {item.label}
+            </button>
+          ))}
       </nav>
 
       <div className="p-4 border-t border-emerald-100">
@@ -98,8 +114,10 @@ function Sidebar({ page, setPage, profile, session, handleLogout }) {
               : 'text-gray-500 hover:bg-gray-50'
           }`}
         >
-          <span>⚙️</span>
-          Settings
+          <span className={page === 'settings' ? 'text-emerald-600' : 'text-gray-400'}>
+            <Settings size={18} strokeWidth={2} />
+          </span>
+            Settings
         </button>
         <div className="flex items-center gap-3 mt-2 mb-3">
           <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm flex-shrink-0">
@@ -111,9 +129,10 @@ function Sidebar({ page, setPage, profile, session, handleLogout }) {
           </div>
         </div>
         <button
-          onClick={handleLogout}
-          className="w-full text-xs text-gray-400 hover:text-red-400 transition-colors text-left"
+        onClick={handleLogout}
+        className="w-full flex items-center gap-2 text-xs text-gray-400 hover:text-red-400 transition-colors text-left mt-1"
         >
+          <LogOut size={14} strokeWidth={2} />
           Log out
         </button>
       </div>
@@ -309,7 +328,7 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, onAddSubject
     <div>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-emerald-900">
-          Good day, {profile?.name || 'there'} 👋
+          Good day, {profile?.name || 'there'} 
         </h1>
         <p className="text-sm text-gray-400 mt-1">
           {subjects.length === 0
