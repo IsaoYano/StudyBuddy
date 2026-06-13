@@ -14,7 +14,7 @@ const DIFFICULTIES = [
   { value: 'advanced', label: 'Advanced', desc: 'Critical thinking and analysis', color: 'text-red-600 bg-red-50 border-red-200' },
 ]
 
-export default function QuizPage({ subject, subtopic, session, onBack, onComplete }) {
+export default function QuizPage({ subject, subtopic, session, onBack, onComplete, studentLanguage = 'English' }) {
   const [step, setStep] = useState('setup')
   const [quizType, setQuizType] = useState('')
   const [difficulty, setDifficulty] = useState('')
@@ -35,7 +35,7 @@ export default function QuizPage({ subject, subtopic, session, onBack, onComplet
     setLoading(true)
     setError('')
     try {
-      const raw = await generateQuiz(subtopic.title, subject.name, quizType, difficulty, [])
+      const raw = await generateQuiz(subtopic.title, subject.name, quizType, difficulty, [], studentLanguage)
       setRawQuiz(raw)
       const parsed = parseQuiz(raw, quizType)
       setParsedQuestions(parsed)
@@ -113,7 +113,7 @@ export default function QuizPage({ subject, subtopic, session, onBack, onComplet
       const studentAnswer = answers[q.id] || ''
       if (studentAnswer.trim()) {
         try {
-          const result = await evaluateAnswer(q.question, studentAnswer, q.modelAnswer || '', subtopic.title)
+          const result = await evaluateAnswer(q.question, studentAnswer, q.modelAnswer || '', subtopic.title, studentLanguage)
           evals[q.id] = result
         } catch {
           evals[q.id] = 'Could not evaluate this answer.'

@@ -21,8 +21,7 @@ function urgencyScore(subject, progress) {
   const remaining = progress.total - progress.done
   if (remaining === 0) return 0
   const daysFactor = Math.max(1, 30 - days)
-  const remainingFactor = remaining
-  return Math.round((daysFactor * remainingFactor * 10) / days)
+  return Math.round((daysFactor * remaining * 10) / days)
 }
 
 function urgencyColor(days) {
@@ -239,6 +238,7 @@ export default function Dashboard({ session }) {
         subject={quizSubject}
         subtopic={quizSubtopic}
         session={session}
+        studentLanguage={studentProfile?.language || 'English'}
         onBack={() => setPage('tutor')}
         onComplete={() => { setPage('subjects'); fetchData() }}
       />
@@ -298,10 +298,12 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, onAddSubject
     score: urgencyScore(s, getProgress(s.id)),
   })).sort((a, b) => b.score - a.score)
 
-  const topSubject = scoredSubjects.find(s => s.progress.done < s.progress.total)
+  const topSubject = scoredSubjects.find(s => s.progress.done < s.progress.total && daysUntil(s.exam_date) > 0)
   const topSubtopic = topSubject
     ? subtopics.find(st => st.subject_id === topSubject.id && !st.is_done)
     : null
+
+  const upcoming = subjects.find(s => daysUntil(s.exam_date) > 0)
 
   return (
     <div>
@@ -341,8 +343,8 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, onAddSubject
           { label: 'Topics done', value: totalDone, sub: `of ${totalTopics} total` },
           {
             label: 'Next exam',
-            value: subjects[0] ? `${daysUntil(subjects[0].exam_date)}d` : '—',
-            sub: subjects[0]?.name || 'No exams yet',
+            value: upcoming ? `${daysUntil(upcoming.exam_date)}d` : '—',
+            sub: upcoming ? upcoming.name : 'No upcoming exams',
           },
         ].map(stat => (
           <div key={stat.label} className="bg-white rounded-2xl border border-emerald-100 p-5">
@@ -393,12 +395,15 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, onAddSubject
                       )}
                     </div>
                     <div className="text-xs text-gray-400 mt-0.5">{done} of {total} subtopics done</div>
-                    <div className="mt-2 bg-emerald-100 rounded-full h-1.5">
-                      <div className="bg-emerald-500 h-1.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    <div className="mt-2 bg-gray-200 rounded-full h-1.5">
+                      <div
+                        className={`h-1.5 rounded-full transition-all ${pct > 0 ? 'bg-emerald-500' : ''}`}
+                        style={{ width: `${pct}%` }}
+                      />
                     </div>
                   </div>
                   <div className={`text-xs font-semibold px-3 py-1.5 rounded-xl border flex-shrink-0 ${urgencyColor(days)}`}>
-                    {days > 0 ? `${days} days` : days === 0 ? 'Today' : 'Past'}
+                    {days > 0 ? `${days} days` : days === 0 ? 'Exam today' : 'Exam passed'}
                   </div>
                 </div>
               )
@@ -430,7 +435,8 @@ function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddS
         <div className="bg-white rounded-2xl border border-dashed border-emerald-200 p-12 text-center">
           <div className="text-4xl mb-3">📚</div>
           <div className="text-sm font-semibold text-gray-600 mb-1">No subjects yet</div>
-          <button onClick={onAddSubject} className="mt-4 bg-emerald-600 text-white text-sm font-semibold px-6 py-2.5 rounded-xl">
+          <div className="text-xs text-gray-400 mb-4">Add your first subject to start tracking your study progress</div>
+          <button onClick={onAddSubject} className="bg-emerald-600 text-white text-sm font-semibold px-6 py-2.5 rounded-xl">
             Add your first subject
           </button>
         </div>
@@ -458,10 +464,13 @@ function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddS
                       {subject.subject_type.replace('_', ' ')}
                     </div>
                     <div className="mt-2 flex items-center gap-2">
-                      <div className="flex-1 bg-emerald-100 rounded-full h-1.5">
-                        <div className="bg-emerald-500 h-1.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                      <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                        <div
+                          className={`h-1.5 rounded-full transition-all ${pct > 0 ? 'bg-emerald-500' : ''}`}
+                          style={{ width: `${pct}%` }}
+                        />
                       </div>
-                      <span className="text-xs text-emerald-600 font-medium">{pct}%</span>
+                      <span className={`text-xs font-medium ${pct > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>{pct}%</span>
                     </div>
                   </div>
                 </div>
