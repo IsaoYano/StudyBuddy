@@ -1,7 +1,8 @@
 import { BrainCircuit } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
-import { useCallback } from 'react'
 import { sendMessage } from '../lib/gemini'
+import { motion, AnimatePresence } from 'framer-motion'
+import { chatMessage, fadeUp } from '../utils/animations'
 
 export default function TutorPage({ subject, subtopic, studentProfile, onBack, onComplete }) {
   const [messages, setMessages] = useState([])
@@ -27,7 +28,6 @@ export default function TutorPage({ subject, subtopic, studentProfile, onBack, o
       const openingPrompt = `Start teaching me about: ${subtopic.title}. Remember my profile and begin with your diagnostic question.`
       const firstHistory = [{ role: 'user', parts: [{ text: openingPrompt }] }]
       const reply = await sendMessage(firstHistory, studentProfile)
-
       setHistory([
         ...firstHistory,
         { role: 'model', parts: [{ text: reply }] }
@@ -56,7 +56,6 @@ export default function TutorPage({ subject, subtopic, studentProfile, onBack, o
       const updatedHistory = [...newHistory, { role: 'model', parts: [{ text: reply }] }]
       setHistory(updatedHistory)
       setMessages([...newMessages, { role: 'ai', text: reply }])
-
       if (reply.includes('You have completed this subtopic')) {
         setQuizReady(true)
       }
@@ -92,7 +91,12 @@ export default function TutorPage({ subject, subtopic, studentProfile, onBack, o
 
       <div className="flex-1 overflow-y-auto px-4 py-6 max-w-3xl w-full mx-auto">
 
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-6 flex items-start gap-3">
+        <motion.div
+          className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-6 flex items-start gap-3"
+          variants={fadeUp}
+          initial="initial"
+          animate="animate"
+        >
           <div className="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center flex-shrink-0">
             <svg viewBox="0 0 60 60" width="20" height="20" fill="none">
               <path d="M30 8C26 5 19 5 16 10C12 7 7 9 6 15C2 17 1 24 5 29C1 33 1 41 6 44C6 51 12 55 18 53C20 58 26 60 30 57C34 60 40 58 42 53C48 55 54 51 54 44C59 41 59 33 55 29C59 24 58 17 54 15C53 9 48 7 44 10C41 5 34 5 30 8Z" stroke="#6ee7b7" strokeWidth="2.5" strokeLinejoin="round"/>
@@ -110,60 +114,90 @@ export default function TutorPage({ subject, subtopic, studentProfile, onBack, o
               Teaching style personalised to your preferences. Type your answers or questions freely.
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        {messages.map((msg, i) => (
-          <div key={i} className={`mb-4 flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            {msg.role === 'ai' && (
+        <AnimatePresence initial={false}>
+          {messages.map((msg, i) => (
+            <motion.div
+              key={i}
+              className={`mb-4 flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              variants={chatMessage}
+              initial="initial"
+              animate="animate"
+            >
+              {msg.role === 'ai' && (
+                <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0 mr-3 mt-1">
+                  <BrainCircuit size={14} strokeWidth={2} className="text-white" />
+                </div>
+              )}
+              <div className={`max-w-xl px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                msg.role === 'user'
+                  ? 'bg-emerald-600 text-white rounded-tr-sm'
+                  : 'bg-white border border-emerald-100 text-gray-700 rounded-tl-sm'
+              }`}>
+                {msg.text}
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {loading && (
+            <motion.div
+              className="flex justify-start mb-4"
+              variants={chatMessage}
+              initial="initial"
+              animate="animate"
+              exit={{ opacity: 0, y: -8 }}
+            >
               <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0 mr-3 mt-1">
                 <BrainCircuit size={14} strokeWidth={2} className="text-white" />
               </div>
-            )}
-            <div className={`max-w-xl px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-              msg.role === 'user'
-                ? 'bg-emerald-600 text-white rounded-tr-sm'
-                : 'bg-white border border-emerald-100 text-gray-700 rounded-tl-sm'
-            }`}>
-              {msg.text}
-            </div>
-          </div>
-        ))}
-
-        {loading && (
-          <div className="flex justify-start mb-4">
-            <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0 mr-3 mt-1">
-              <BrainCircuit size={14} strokeWidth={2} className="text-white" />
-            </div>
-            <div className="bg-white border border-emerald-100 px-4 py-3 rounded-2xl rounded-tl-sm">
-              <div className="flex gap-1 items-center h-5">
-                <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div className="bg-white border border-emerald-100 px-4 py-3 rounded-2xl rounded-tl-sm">
+                <div className="flex gap-1 items-center h-5">
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3 mb-4">
+          <motion.div
+            className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3 mb-4"
+            variants={fadeUp}
+            initial="initial"
+            animate="animate"
+          >
             {error}
-          </div>
+          </motion.div>
         )}
 
-        {quizReady && (
-          <div className="bg-emerald-50 border border-emerald-500 rounded-2xl p-5 mb-4 flex items-center justify-between gap-4">
-            <div>
-              <div className="text-sm font-bold text-emerald-800">Subtopic complete!</div>
-              <div className="text-xs text-emerald-600 mt-0.5">Ready to test what you have learned?</div>
-            </div>
-            <button
-              onClick={onComplete}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors flex-shrink-0"
+        <AnimatePresence>
+          {quizReady && (
+            <motion.div
+              className="bg-emerald-50 border border-emerald-500 rounded-2xl p-5 mb-4 flex items-center justify-between gap-4"
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             >
-              Take quiz
-            </button>
-          </div>
-        )}
+              <div>
+                <div className="text-sm font-bold text-emerald-800">Subtopic complete!</div>
+                <div className="text-xs text-emerald-600 mt-0.5">Ready to test what you have learned?</div>
+              </div>
+              <motion.button
+                onClick={onComplete}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors flex-shrink-0"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                Take quiz
+              </motion.button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div ref={bottomRef} />
       </div>
@@ -178,13 +212,15 @@ export default function TutorPage({ subject, subtopic, studentProfile, onBack, o
             rows={2}
             className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all resize-none"
           />
-          <button
+          <motion.button
             onClick={handleSend}
             disabled={loading || !input.trim()}
             className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-5 py-3 text-sm font-semibold disabled:opacity-40 transition-colors flex-shrink-0"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
           >
             Send
-          </button>
+          </motion.button>
         </div>
       </div>
 

@@ -1,6 +1,5 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { extractSubtopicsFromText, readPDFText } from '../lib/slideReader'
 import {
   Brain,
   Laptop,
@@ -17,67 +16,40 @@ const SUBJECT_TYPES = [
   { value: 'research', label: 'Research Methods', icon: <Microscope size={20} strokeWidth={2} className="text-teal-500" /> },
 ]
 
-export default function AddSubjectPage({ session, onBack, onSaved }) {
-  const [name, setName] = useState('')
-  const [subjectType, setSubjectType] = useState('')
-  const [examDate, setExamDate] = useState('')
-  const [subtopics, setSubtopics] = useState([''])
+export default function EditSubjectPage({ session, subject, onBack, onSaved }) {
+  const [name, setName] = useState(subject.name)
+  const [subjectType, setSubjectType] = useState(subject.subject_type)
+  const [examDate, setExamDate] = useState(subject.exam_date)
+  const [subtopics, setSubtopics] = useState([])
   const [loading, setLoading] = useState(false)
+  const [fetching, setFetching] = useState(true)
   const [error, setError] = useState('')
-  const [uploadLoading, setUploadLoading] = useState(false)
-  const [uploadSuccess, setUploadSuccess] = useState(false)
-  const fileRef = useRef(null)
+
+  useEffect(() => {
+    fetchSubtopics()
+  }, [])
+
+  async function fetchSubtopics() {
+    const { data } = await supabase
+      .from('subtopics')
+      .select('*')
+      .eq('subject_id', subject.id)
+      .order('created_at', { ascending: true })
+    setSubtopics(data || [])
+    setFetching(false)
+  }
 
   function addSubtopicField() {
-    setSubtopics([...subtopics, ''])
+    setSubtopics([...subtopics, { id: `new_${Date.now()}`, title: '', is_done: false, isNew: true }])
   }
 
-  function updateSubtopic(index, value) {
-    const updated = [...subtopics]
-    updated[index] = value
-    setSubtopics(updated)
+  function updateSubtopic(id, value) {
+    setSubtopics(prev => prev.map(s => s.id === id ? { ...s, title: value } : s))
   }
 
-  function removeSubtopic(index) {
+  function removeSubtopic(id) {
     if (subtopics.length === 1) return
-    setSubtopics(subtopics.filter((_, i) => i !== index))
-  }
-
-  async function handleFileUpload(e) {
-    const file = e.target.files[0]
-    if (!file) return
-    if (!name) {
-      setError('Please enter a subject name first so the AI knows what subject the slides are for.')
-      return
-    }
-    setUploadLoading(true)
-    setError('')
-    setUploadSuccess(false)
-    try {
-      let text = ''
-      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-        text = await readPDFText(file)
-      } else {
-        setError('Please upload a PDF file.')
-        setUploadLoading(false)
-        return
-      }
-      if (!text || text.trim().length < 50) {
-        setError('Could not read enough text from this PDF. Try a PDF with selectable text, not a scanned image.')
-        setUploadLoading(false)
-        return
-      }
-      const extracted = await extractSubtopicsFromText(text, name)
-      if (extracted.length > 0) {
-        setSubtopics(extracted)
-        setUploadSuccess(true)
-      } else {
-        setError('Could not extract subtopics. You can still add them manually below.')
-      }
-    } catch (err) {
-      setError('File reading failed. Please try again or add subtopics manually.')
-    }
-    setUploadLoading(false)
+    setSubtopics(prev => prev.filter(s => s.id !== id))
   }
 
   async function handleSubmit(e) {
@@ -85,7 +57,7 @@ export default function AddSubjectPage({ session, onBack, onSaved }) {
     setLoading(true)
     setError('')
 
-    const filledSubtopics = subtopics.filter(s => s.trim() !== '')
+    const filledSubtopics = subtopics.filter(s => s.title.trim() !== '')
     if (!subjectType) {
       setError('Please select a subject type.')
       setLoading(false)
@@ -97,11 +69,10 @@ export default function AddSubjectPage({ session, onBack, onSaved }) {
       return
     }
 
-    const { data: subject, error: subjectError } = await supabase
+    const { error: subjectError } = await supabase
       .from('subjects')
-      .insert({ user_id: session.user.id, name, subject_type: subjectType, exam_date: examDate })
-      .select()
-      .single()
+      .update({ name, subject_type: subjectType, exam_date: examDate })
+      .eq('id', subject.id)
 
     if (subjectError) {
       setError(subjectError.message)
@@ -109,21 +80,40 @@ export default function AddSubjectPage({ session, onBack, onSaved }) {
       return
     }
 
-    const subtopicRows = filledSubtopics.map(title => ({
-      subject_id: subject.id,
-      user_id: session.user.id,
-      title,
-    }))
+    const newSubtopics = filledSubtopics.filter(s => s.isNew)
+    const existingSubtopics = filledSubtopics.filter(s => !s.isNew)
+    const originalIds = (await supabase.from('subtopics').select('id').eq('subject_id', subject.id)).data?.map(s => s.id) || []
+    const keepIds = existingSubtopics.map(s => s.id)
+    const deleteIds = originalIds.filter(id => !keepIds.includes(id))
 
-    const { error: subtopicError } = await supabase.from('subtopics').insert(subtopicRows)
-    if (subtopicError) {
-      setError(subtopicError.message)
-      setLoading(false)
-      return
+    if (deleteIds.length > 0) {
+      await supabase.from('subtopics').delete().in('id', deleteIds)
+    }
+
+    for (const sub of existingSubtopics) {
+      await supabase.from('subtopics').update({ title: sub.title }).eq('id', sub.id)
+    }
+
+    if (newSubtopics.length > 0) {
+      await supabase.from('subtopics').insert(
+        newSubtopics.map(s => ({
+          subject_id: subject.id,
+          user_id: session.user.id,
+          title: s.title,
+        }))
+      )
     }
 
     setLoading(false)
     onSaved()
+  }
+
+  if (fetching) {
+    return (
+      <div className="min-h-screen bg-emerald-50 flex items-center justify-center">
+        <div className="text-sm text-gray-400">Loading subject...</div>
+      </div>
+    )
   }
 
   return (
@@ -135,8 +125,8 @@ export default function AddSubjectPage({ session, onBack, onSaved }) {
             ← Back
           </button>
           <div>
-            <h1 className="text-xl font-bold text-emerald-900">Add subject</h1>
-            <p className="text-xs text-gray-400">Fill in the details for your subject</p>
+            <h1 className="text-xl font-bold text-emerald-900">Edit subject</h1>
+            <p className="text-xs text-gray-400">Update the details for this subject</p>
           </div>
         </div>
 
@@ -157,7 +147,6 @@ export default function AddSubjectPage({ session, onBack, onSaved }) {
                   type="text"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  placeholder="e.g. Introduction to Cognitive Sciences"
                   required
                   className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
                 />
@@ -212,7 +201,7 @@ export default function AddSubjectPage({ session, onBack, onSaved }) {
           </div>
 
           <div className="bg-white rounded-2xl border border-emerald-100 p-6">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-gray-700">Subtopics</h2>
               <button
                 type="button"
@@ -222,67 +211,21 @@ export default function AddSubjectPage({ session, onBack, onSaved }) {
                 + Add more
               </button>
             </div>
-
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-4">
-              <div className="text-xs font-semibold text-emerald-700 mb-1">
-                Upload lecture slides to auto-extract subtopics
-              </div>
-              <div className="text-xs text-emerald-600 mb-3">
-                Upload a PDF of your lecture slides and the AI will suggest subtopics automatically.
-                Make sure you enter the subject name first.
-              </div>
-              <input
-                ref={fileRef}
-                type="file"
-                accept=".pdf"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                disabled={uploadLoading}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
-              >
-                {uploadLoading ? (
-                  <>
-                    <svg className="animate-spin h-3 w-3 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                    </svg>
-                    Extracting subtopics...
-                  </>
-                ) : (
-                  'Upload PDF slides'
-                )}
-              </button>
-              {uploadLoading && (
-                <p className="text-xs text-emerald-600 mt-2">
-                  StudyBuddy is reading your lecture slides. This may take a moment.
-                </p>
-              )}
-              {uploadSuccess && (
-                <p className="text-xs text-emerald-600 font-medium mt-2">
-                  ✓ Subtopics extracted successfully. Edit them below if needed.
-                </p>
-              )}
-            </div>
-
             <div className="flex flex-col gap-2">
               {subtopics.map((subtopic, index) => (
-                <div key={index} className="flex gap-2 items-center">
+                <div key={subtopic.id} className="flex gap-2 items-center">
                   <span className="text-xs text-gray-400 w-5 text-right flex-shrink-0">{index + 1}</span>
                   <input
                     type="text"
-                    value={subtopic}
-                    onChange={e => updateSubtopic(index, e.target.value)}
-                    placeholder="e.g. Neurons and synapses"
+                    value={subtopic.title}
+                    onChange={e => updateSubtopic(subtopic.id, e.target.value)}
+                    placeholder="Subtopic title"
                     className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
                   />
                   {subtopics.length > 1 && (
                     <button
                       type="button"
-                      onClick={() => removeSubtopic(index)}
+                      onClick={() => removeSubtopic(subtopic.id)}
                       className="text-gray-300 hover:text-red-400 text-lg transition-colors"
                     >
                       ×
@@ -298,7 +241,7 @@ export default function AddSubjectPage({ session, onBack, onSaved }) {
             disabled={loading}
             className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-3.5 text-sm font-semibold disabled:opacity-50 transition-colors"
           >
-            {loading ? 'Saving...' : 'Save subject'}
+            {loading ? 'Saving...' : 'Save changes'}
           </button>
 
         </form>

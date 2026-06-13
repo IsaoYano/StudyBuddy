@@ -1,3 +1,14 @@
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
+import AddSubjectPage from './AddSubjectPage'
+import OnboardingPage from './OnboardingPage'
+import TutorPage from './TutorPage'
+import QuizPage from './QuizPage'
+import HistoryPage from './HistoryPage'
+import SettingsPage from './SettingsPage'
+import EditSubjectPage from './EditSubjectPage'
+import { motion, AnimatePresence } from 'framer-motion'
+import { fadeUp, staggerContainer, cardItem, modalBackdrop, modalCard } from '../utils/animations'
 import {
   LayoutDashboard,
   BookOpen,
@@ -11,14 +22,6 @@ import {
   Microscope,
   BookMarked,
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import AddSubjectPage from './AddSubjectPage'
-import OnboardingPage from './OnboardingPage'
-import TutorPage from './TutorPage'
-import QuizPage from './QuizPage'
-import HistoryPage from './HistoryPage'
-import SettingsPage from './SettingsPage'
 
 function daysUntil(dateStr) {
   const today = new Date()
@@ -53,6 +56,55 @@ function typeIcon(type) {
     research: <Microscope {...props} className="text-teal-500" />,
   }
   return icons[type] || <BookMarked {...props} className="text-gray-400" />
+}
+
+function DeleteModal({ onCancel, onConfirm }) {
+  return (
+    <motion.div
+      className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4"
+      variants={modalBackdrop}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+    >
+      <motion.div
+        className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6 w-full max-w-sm"
+        variants={modalCard}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+      >
+        <div className="w-12 h-12 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center mx-auto mb-4">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+            <path d="M10 11v6M14 11v6"/>
+            <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+          </svg>
+        </div>
+        <h3 className="text-base font-bold text-gray-900 text-center mb-2">Delete subject?</h3>
+        <p className="text-sm text-gray-500 text-center mb-6 leading-relaxed">
+          This will permanently delete the subject along with all its subtopics and quiz results. This action cannot be undone.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <motion.button
+            onClick={onConfirm}
+            className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
+          >
+            Yes, delete
+          </motion.button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
 }
 
 function Sidebar({ page, setPage, profile, session, handleLogout }) {
@@ -100,9 +152,9 @@ function Sidebar({ page, setPage, profile, session, handleLogout }) {
             <span className={page === item.id ? 'text-emerald-600' : 'text-gray-400'}>
               {item.icon}
             </span>
-              {item.label}
-            </button>
-          ))}
+            {item.label}
+          </button>
+        ))}
       </nav>
 
       <div className="p-4 border-t border-emerald-100">
@@ -117,7 +169,7 @@ function Sidebar({ page, setPage, profile, session, handleLogout }) {
           <span className={page === 'settings' ? 'text-emerald-600' : 'text-gray-400'}>
             <Settings size={18} strokeWidth={2} />
           </span>
-            Settings
+          Settings
         </button>
         <div className="flex items-center gap-3 mt-2 mb-3">
           <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm flex-shrink-0">
@@ -129,8 +181,8 @@ function Sidebar({ page, setPage, profile, session, handleLogout }) {
           </div>
         </div>
         <button
-        onClick={handleLogout}
-        className="w-full flex items-center gap-2 text-xs text-gray-400 hover:text-red-400 transition-colors text-left mt-1"
+          onClick={handleLogout}
+          className="w-full flex items-center gap-2 text-xs text-gray-400 hover:text-red-400 transition-colors text-left mt-1"
         >
           <LogOut size={14} strokeWidth={2} />
           Log out
@@ -151,6 +203,8 @@ export default function Dashboard({ session }) {
   const [studentProfile, setStudentProfile] = useState(null)
   const [quizSubject, setQuizSubject] = useState(null)
   const [quizSubtopic, setQuizSubtopic] = useState(null)
+  const [editingSubject, setEditingSubject] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
 
   useEffect(() => {
     fetchData()
@@ -201,12 +255,38 @@ export default function Dashboard({ session }) {
     setPage('onboarding')
   }
 
+  function handleEditSubject(subject) {
+    setEditingSubject(subject)
+    setPage('edit')
+  }
+
+  function handleDeleteSubject(subjectId) {
+    setDeleteConfirm(subjectId)
+  }
+
+  async function confirmDelete() {
+    await supabase.from('subjects').delete().eq('id', deleteConfirm)
+    setDeleteConfirm(null)
+    fetchData()
+  }
+
   if (page === 'add') {
     return (
       <AddSubjectPage
         session={session}
         onBack={() => setPage('dashboard')}
         onSaved={() => { setPage('dashboard'); fetchData() }}
+      />
+    )
+  }
+
+  if (page === 'edit' && editingSubject) {
+    return (
+      <EditSubjectPage
+        session={session}
+        subject={editingSubject}
+        onBack={() => setPage('subjects')}
+        onSaved={() => { setPage('subjects'); fetchData() }}
       />
     )
   }
@@ -266,6 +346,15 @@ export default function Dashboard({ session }) {
 
   return (
     <div className="min-h-screen bg-emerald-50 flex">
+      <AnimatePresence>
+        {deleteConfirm && (
+          <DeleteModal
+            onCancel={() => setDeleteConfirm(null)}
+            onConfirm={confirmDelete}
+          />
+        )}
+      </AnimatePresence>
+
       <Sidebar
         page={page}
         setPage={setPage}
@@ -296,6 +385,8 @@ export default function Dashboard({ session }) {
             toggleSubtopic={toggleSubtopic}
             onAddSubject={() => setPage('add')}
             onStudy={handleStudy}
+            onEdit={handleEditSubject}
+            onDelete={handleDeleteSubject}
           />
         ) : page === 'history' ? (
           <HistoryPage session={session} />
@@ -325,10 +416,10 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, onAddSubject
   const upcoming = subjects.find(s => daysUntil(s.exam_date) > 0)
 
   return (
-    <div>
+    <motion.div variants={fadeUp} initial="initial" animate="animate">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-emerald-900">
-          Good day, {profile?.name || 'there'} 
+          Good day, {profile?.name || 'there'}
         </h1>
         <p className="text-sm text-gray-400 mt-1">
           {subjects.length === 0
@@ -338,7 +429,12 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, onAddSubject
       </div>
 
       {topSubject && topSubtopic && (
-        <div className="bg-emerald-700 rounded-2xl p-5 mb-8 flex items-center justify-between gap-4">
+        <motion.div
+          className="bg-emerald-700 rounded-2xl p-5 mb-8 flex items-center justify-between gap-4"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
           <div>
             <div className="text-xs font-semibold text-emerald-300 uppercase tracking-wide mb-1">Study this next</div>
             <div className="text-white font-bold text-base">{topSubject.name}</div>
@@ -347,16 +443,23 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, onAddSubject
               {daysUntil(topSubject.exam_date)} days to exam · {topSubject.progress.total - topSubject.progress.done} topics remaining
             </div>
           </div>
-          <button
+          <motion.button
             onClick={() => onStudy(topSubject, topSubtopic)}
             className="bg-white text-emerald-700 font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-emerald-50 transition-colors flex-shrink-0"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
           >
             Study now
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       )}
 
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <motion.div
+        className="grid grid-cols-3 gap-4 mb-8"
+        variants={staggerContainer}
+        initial="initial"
+        animate="animate"
+      >
         {[
           { label: 'Subjects', value: subjects.length, sub: 'This semester' },
           { label: 'Topics done', value: totalDone, sub: `of ${totalTopics} total` },
@@ -366,26 +469,32 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, onAddSubject
             sub: upcoming ? upcoming.name : 'No upcoming exams',
           },
         ].map(stat => (
-          <div key={stat.label} className="bg-white rounded-2xl border border-emerald-100 p-5">
+          <motion.div key={stat.label} className="bg-white rounded-2xl border border-emerald-100 p-5" variants={cardItem}>
             <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">{stat.label}</div>
             <div className="text-3xl font-bold text-emerald-800">{stat.value}</div>
             <div className="text-xs text-emerald-500 mt-1">{stat.sub}</div>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {subjects.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-dashed border-emerald-200 p-12 text-center">
-          <div className="text-4xl mb-3">📚</div>
+        <motion.div
+          className="bg-white rounded-2xl border border-dashed border-emerald-200 p-12 text-center"
+          variants={cardItem}
+          initial="initial"
+          animate="animate"
+        >
           <div className="text-sm font-semibold text-gray-600 mb-1">No subjects yet</div>
           <div className="text-xs text-gray-400 mb-5">Add your first subject to start tracking your study progress</div>
-          <button
+          <motion.button
             onClick={onAddSubject}
             className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
           >
             Add your first subject
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       ) : (
         <div>
           <div className="flex items-center justify-between mb-4">
@@ -394,14 +503,25 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, onAddSubject
               + Add subject
             </button>
           </div>
-          <div className="flex flex-col gap-3">
+          <motion.div
+            className="flex flex-col gap-3"
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+          >
             {scoredSubjects.map(subject => {
               const days = daysUntil(subject.exam_date)
               const { done, total } = subject.progress
               const pct = total > 0 ? Math.round((done / total) * 100) : 0
               return (
-                <div key={subject.id} className="bg-white rounded-2xl border border-emerald-100 p-5 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-xl flex-shrink-0">
+                <motion.div
+                  key={subject.id}
+                  className="bg-white rounded-2xl border border-emerald-100 p-5 flex items-center gap-4"
+                  variants={cardItem}
+                  whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(0,0,0,0.06)' }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0">
                     {typeIcon(subject.subject_type)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -415,61 +535,80 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, onAddSubject
                     </div>
                     <div className="text-xs text-gray-400 mt-0.5">{done} of {total} subtopics done</div>
                     <div className="mt-2 bg-gray-200 rounded-full h-1.5">
-                      <div
-                        className={`h-1.5 rounded-full transition-all ${pct > 0 ? 'bg-emerald-500' : ''}`}
-                        style={{ width: `${pct}%` }}
+                      <motion.div
+                        className={`h-1.5 rounded-full ${pct > 0 ? 'bg-emerald-500' : ''}`}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
                       />
                     </div>
                   </div>
                   <div className={`text-xs font-semibold px-3 py-1.5 rounded-xl border flex-shrink-0 ${urgencyColor(days)}`}>
                     {days > 0 ? `${days} days` : days === 0 ? 'Exam today' : 'Exam passed'}
                   </div>
-                </div>
+                </motion.div>
               )
             })}
-          </div>
+          </motion.div>
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }
 
-function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddSubject, onStudy }) {
+function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddSubject, onStudy, onEdit, onDelete }) {
   return (
-    <div>
+    <motion.div variants={fadeUp} initial="initial" animate="animate">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-emerald-900">My subjects</h1>
           <p className="text-sm text-gray-400 mt-1">Track your subtopics and mark them as done</p>
         </div>
-        <button
+        <motion.button
           onClick={onAddSubject}
           className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
         >
           + Add subject
-        </button>
+        </motion.button>
       </div>
 
       {subjects.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-dashed border-emerald-200 p-12 text-center">
-          <div className="text-4xl mb-3">📚</div>
+        <motion.div
+          className="bg-white rounded-2xl border border-dashed border-emerald-200 p-12 text-center"
+          variants={cardItem}
+          initial="initial"
+          animate="animate"
+        >
           <div className="text-sm font-semibold text-gray-600 mb-1">No subjects yet</div>
           <div className="text-xs text-gray-400 mb-4">Add your first subject to start tracking your study progress</div>
           <button onClick={onAddSubject} className="bg-emerald-600 text-white text-sm font-semibold px-6 py-2.5 rounded-xl">
             Add your first subject
           </button>
-        </div>
+        </motion.div>
       ) : (
-        <div className="flex flex-col gap-4">
+        <motion.div
+          className="flex flex-col gap-4"
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
+        >
           {subjects.map(subject => {
             const days = daysUntil(subject.exam_date)
             const { done, total } = getProgress(subject.id)
             const pct = total > 0 ? Math.round((done / total) * 100) : 0
             const subjectSubtopics = subtopics.filter(s => s.subject_id === subject.id)
             return (
-              <div key={subject.id} className="bg-white rounded-2xl border border-emerald-100 p-6">
+              <motion.div
+                key={subject.id}
+                className="bg-white rounded-2xl border border-emerald-100 p-6"
+                variants={cardItem}
+                whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(0,0,0,0.06)' }}
+                transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+              >
                 <div className="flex items-start gap-4 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-xl flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0">
                     {typeIcon(subject.subject_type)}
                   </div>
                   <div className="flex-1">
@@ -484,13 +623,29 @@ function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddS
                     </div>
                     <div className="mt-2 flex items-center gap-2">
                       <div className="flex-1 bg-gray-200 rounded-full h-1.5">
-                        <div
-                          className={`h-1.5 rounded-full transition-all ${pct > 0 ? 'bg-emerald-500' : ''}`}
-                          style={{ width: `${pct}%` }}
+                        <motion.div
+                          className={`h-1.5 rounded-full ${pct > 0 ? 'bg-emerald-500' : ''}`}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${pct}%` }}
+                          transition={{ duration: 0.6, ease: 'easeOut', delay: 0.2 }}
                         />
                       </div>
                       <span className={`text-xs font-medium ${pct > 0 ? 'text-emerald-600' : 'text-gray-400'}`}>{pct}%</span>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => onEdit(subject)}
+                      className="text-xs text-gray-400 hover:text-emerald-600 border border-gray-200 hover:border-emerald-300 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => onDelete(subject.id)}
+                      className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 mt-4">
@@ -513,20 +668,22 @@ function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddS
                           {subtopic.title}
                         </span>
                       </button>
-                      <button
+                      <motion.button
                         onClick={() => onStudy(subject, subtopic)}
                         className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors flex-shrink-0"
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.96 }}
                       >
                         Study
-                      </button>
+                      </motion.button>
                     </div>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             )
           })}
-        </div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   )
 }

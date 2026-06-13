@@ -1,14 +1,20 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { Eye, EyeOff } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { fadeUp } from '../utils/animations'
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -16,9 +22,27 @@ export default function AuthPage() {
     setError('')
     setMessage('')
 
+    if (!isLogin && password !== confirmPassword) {
+      setError('Passwords do not match. Please check and try again.')
+      setLoading(false)
+      return
+    }
+
+    if (!isLogin && password.length < 6) {
+      setError('Password must be at least 6 characters.')
+      setLoading(false)
+      return
+    }
+
     if (isLogin) {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) setError(error.message)
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          setError('We could not find an account with these credentials. Please check your email and password.')
+        } else {
+          setError(error.message)
+        }
+      }
     } else {
       const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) {
@@ -33,11 +57,20 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-emerald-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-
+      <motion.div
+        className="w-full max-w-sm"
+        variants={fadeUp}
+        initial="initial"
+        animate="animate"
+      >
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-50 border border-emerald-200 rounded-2xl mb-4">
-            <svg viewBox="0 0 60 60" width="44" height="44" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <motion.div
+            className="inline-flex items-center justify-center w-16 h-16 bg-emerald-50 border border-emerald-200 rounded-2xl mb-4"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <svg viewBox="0 0 60 60" width="44" height="44" fill="none">
               <path d="M30 8C26 5 19 5 16 10C12 7 7 9 6 15C2 17 1 24 5 29C1 33 1 41 6 44C6 51 12 55 18 53C20 58 26 60 30 57C34 60 40 58 42 53C48 55 54 51 54 44C59 41 59 33 55 29C59 24 58 17 54 15C53 9 48 7 44 10C41 5 34 5 30 8Z" stroke="#059669" strokeWidth="2.2" strokeLinejoin="round"/>
               <line x1="30" y1="10" x2="30" y2="50" stroke="#059669" strokeWidth="1.2" strokeDasharray="3,2.5"/>
               <path d="M16 22C13 27 14 34 17 38" stroke="#059669" strokeWidth="1.5" strokeLinecap="round"/>
@@ -58,12 +91,17 @@ export default function AuthPage() {
               <line x1="25" y1="28" x2="30" y2="40" stroke="#059669" strokeWidth="0.9" opacity="0.6"/>
               <line x1="35" y1="28" x2="30" y2="40" stroke="#059669" strokeWidth="0.9" opacity="0.6"/>
             </svg>
-          </div>
+          </motion.div>
           <h1 className="text-2xl font-bold text-emerald-900">StudyBuddy</h1>
           <p className="text-sm text-gray-500 mt-1">FSKPM · UNIMAS</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-emerald-100 p-8 shadow-sm">
+        <motion.div
+          className="bg-white rounded-2xl border border-emerald-100 p-8 shadow-sm"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+        >
           <h2 className="text-lg font-semibold text-gray-800 mb-1">
             {isLogin ? 'Welcome back' : 'Create account'}
           </h2>
@@ -72,14 +110,24 @@ export default function AuthPage() {
           </p>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">
+            <motion.div
+              className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+            >
               {error}
-            </div>
+            </motion.div>
           )}
           {message && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3 mb-4">
+            <motion.div
+              className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3 mb-4"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+            >
               {message}
-            </div>
+            </motion.div>
           )}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -96,6 +144,7 @@ export default function AuthPage() {
                 />
               </div>
             )}
+
             <div>
               <label className="text-xs font-medium text-gray-500 mb-1.5 block">Email</label>
               <input
@@ -107,37 +156,86 @@ export default function AuthPage() {
                 className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
               />
             </div>
+
             <div>
               <label className="text-xs font-medium text-gray-500 mb-1.5 block">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="Min 6 characters"
-                required
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Min 6 characters"
+                  required
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {!isLogin && password.length > 0 && password.length < 6 && (
+                <p className="text-xs text-red-500 mt-1">Password must be at least 6 characters.</p>
+              )}
             </div>
-            <button
+
+            {!isLogin && (
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1.5 block">Confirm password</label>
+                <div className="relative">
+                  <input
+                    type={showConfirm ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter your password"
+                    required
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 pr-10 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {confirmPassword.length > 0 && password !== confirmPassword && (
+                  <p className="text-xs text-red-500 mt-1">Passwords do not match.</p>
+                )}
+              </div>
+            )}
+
+            <motion.button
               type="submit"
               disabled={loading}
               className="mt-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-3 text-sm font-semibold disabled:opacity-50 transition-colors"
+              whileHover={{ scale: 1.01, boxShadow: '0 6px 20px rgba(5,150,105,0.25)' }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
             >
               {loading ? 'Please wait...' : isLogin ? 'Log in' : 'Create account'}
-            </button>
+            </motion.button>
           </form>
 
           <p className="text-xs text-gray-400 text-center mt-5">
             {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
             <button
-              onClick={() => { setIsLogin(!isLogin); setError(''); setMessage('') }}
+              onClick={() => {
+                setIsLogin(!isLogin)
+                setError('')
+                setMessage('')
+                setPassword('')
+                setConfirmPassword('')
+              }}
               className="text-emerald-600 font-medium hover:underline"
             >
               {isLogin ? 'Register' : 'Log in'}
             </button>
           </p>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   )
 }

@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { fadeUp, cardItem, staggerContainer } from '../utils/animations'
 
 const QUESTIONS = [
   {
@@ -48,7 +50,6 @@ export default function OnboardingPage({ subject, subtopic, onStart, onBack }) {
   function selectAnswer(questionId, value) {
     const updated = { ...answers, [questionId]: value }
     setAnswers(updated)
-
     setTimeout(() => {
       if (step < QUESTIONS.length - 1) {
         setStep(step + 1)
@@ -73,71 +74,117 @@ export default function OnboardingPage({ subject, subtopic, onStart, onBack }) {
     <div className="min-h-screen bg-emerald-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
 
-        <div className="flex items-center gap-3 mb-8">
+        <motion.div
+          className="flex items-center gap-3 mb-8"
+          variants={fadeUp}
+          initial="initial"
+          animate="animate"
+        >
           <button
             onClick={onBack}
             className="text-sm text-gray-400 hover:text-emerald-600 transition-colors"
           >
-            Back
+            ← Back
           </button>
           <div>
             <div className="text-xs text-emerald-600 font-medium">{subject.name}</div>
             <div className="text-xs text-gray-400">Subtopic: {subtopic.title}</div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="bg-white rounded-2xl border border-emerald-100 p-8 shadow-sm">
-
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-gray-400 font-medium">
-                Question {step + 1} of {QUESTIONS.length}
-              </span>
-              <span className="text-xs text-emerald-600 font-medium">
-                {Math.round(progress)}%
-              </span>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            className="bg-white rounded-2xl border border-emerald-100 p-8 shadow-sm"
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -30 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-gray-400 font-medium">
+                  Question {step + 1} of {QUESTIONS.length}
+                </span>
+                <span className="text-xs text-emerald-600 font-medium">
+                  {Math.round(progress)}%
+                </span>
+              </div>
+              <div className="bg-gray-200 rounded-full h-1.5">
+                <motion.div
+                  className="bg-emerald-500 h-1.5 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.4, ease: 'easeOut' }}
+                />
+              </div>
             </div>
-            <div className="bg-emerald-100 rounded-full h-1.5">
-              <div
-                className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
 
-          <h2 className="text-lg font-bold text-emerald-900 mb-6">
-            {current.question}
-          </h2>
+            <h2 className="text-lg font-bold text-emerald-900 mb-6">
+              {current.question}
+            </h2>
 
-          <div className="flex flex-col gap-3">
-            {current.options.map(option => (
-              <button
-                key={option.value}
-                onClick={() => selectAnswer(current.id, option.value)}
-                className={`flex items-start gap-4 p-4 rounded-xl border text-left transition-all hover:border-emerald-400 hover:bg-emerald-50 ${
-                  answers[current.id] === option.value
-                    ? 'border-emerald-500 bg-emerald-50'
-                    : 'border-gray-200'
-                }`}
-              >
-                <div className={`w-4 h-4 rounded-full border-2 mt-0.5 flex-shrink-0 transition-all ${
-                  answers[current.id] === option.value
-                    ? 'border-emerald-500 bg-emerald-500'
-                    : 'border-gray-300'
-                }`} />
-                <div>
-                  <div className="text-sm font-semibold text-gray-800">{option.label}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{option.desc}</div>
-                </div>
-              </button>
-            ))}
-          </div>
+            <motion.div
+              className="flex flex-col gap-3"
+              variants={staggerContainer}
+              initial="initial"
+              animate="animate"
+            >
+              {current.options.map(option => (
+                <motion.button
+                  key={option.value}
+                  onClick={() => selectAnswer(current.id, option.value)}
+                  className={`flex items-center gap-4 p-4 rounded-xl border text-left transition-all ${
+                    answers[current.id] === option.value
+                      ? 'border-emerald-500 bg-emerald-50 shadow-sm'
+                      : 'border-gray-200 hover:border-emerald-300 hover:bg-gray-50'
+                  }`}
+                  variants={cardItem}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                    answers[current.id] === option.value
+                      ? 'border-emerald-500 bg-emerald-500'
+                      : 'border-gray-300'
+                  }`}>
+                    {answers[current.id] === option.value && (
+                      <span className="text-white text-xs font-bold">✓</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className={`text-sm font-semibold ${
+                      answers[current.id] === option.value ? 'text-emerald-800' : 'text-gray-800'
+                    }`}>
+                      {option.label}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-0.5">{option.desc}</div>
+                  </div>
+                  {answers[current.id] === option.value && (
+                    <motion.span
+                      className="text-xs font-semibold text-emerald-600 flex-shrink-0"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      Selected
+                    </motion.span>
+                  )}
+                </motion.button>
+              ))}
+            </motion.div>
 
-        </div>
+          </motion.div>
+        </AnimatePresence>
 
-        <p className="text-xs text-gray-400 text-center mt-4">
+        <motion.p
+          className="text-xs text-gray-400 text-center mt-4"
+          variants={fadeUp}
+          initial="initial"
+          animate="animate"
+        >
           Your answers personalise how the AI tutor teaches you
-        </p>
+        </motion.p>
 
       </div>
     </div>
