@@ -45,47 +45,37 @@ Example format:
   return lines
 }
 
-export async function readPDFText(file) {
+export function readPDFText(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = async (e) => {
       try {
-        const typedArray = new Uint8Array(e.target.result)
+        const arrayBuffer = e.target.result
+        const uint8Array = new Uint8Array(arrayBuffer)
 
-        // Load PDF.js from CDN
-        const script = document.createElement('script')
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
-
-        script.onload = async () => {
-          try {
-            const pdfjsLib = window['pdfjs-dist/build/pdf']
-            pdfjsLib.GlobalWorkerOptions.workerSrc =
-              'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
-
-            const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise
-            let fullText = ''
-
-            for (let i = 1; i <= Math.min(pdf.numPages, 40); i++) {
-              const page = await pdf.getPage(i)
-              const content = await page.getTextContent()
-              const pageText = content.items.map(item => item.str).join(' ')
-              fullText += `\nSlide ${i}: ${pageText}`
-            }
-
-            resolve(fullText)
-          } catch (err) {
-            reject(err)
-          }
+        // Load pdfjs from CDN dynamically
+        if (!window.pdfjsLib) {
+          await new Promise((res, rej) => {
+            const script = document.createElement('script')
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+            script.crossOrigin = 'anonymous'
+            script.onload = res
+            script.onerror = rej
+            document.head.appendChild(script)
+          })
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
         }
 
-        script.onerror = () => reject(new Error('Could not load PDF reader'))
-
-        // Only add script if not already loaded
-        if (!window['pdfjs-dist/build/pdf']) {
-          document.head.appendChild(script)
-        } else {
-          script.onload()
+        const pdf = await window.pdfjsLib.getDocument({ data: uint8Array }).promise
+        let fullText = ''
+        for (let i = 1; i <= Math.min(pdf.numPages, 40); i++) {
+          const page = await pdf.getPage(i)
+          const content = await page.getTextContent()
+          const pageText = content.items.map(item => item.str).join(' ')
+          fullText += `\nSlide ${i}: ${pageText}`
         }
+        resolve(fullText)
       } catch (err) {
         reject(err)
       }
