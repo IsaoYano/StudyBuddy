@@ -9,6 +9,7 @@ import SettingsPage from './SettingsPage'
 import EditSubjectPage from './EditSubjectPage'
 import { motion, AnimatePresence } from 'framer-motion'
 import { fadeUp, staggerContainer, cardItem, modalBackdrop, modalCard } from '../utils/animations'
+import { calculateStreak } from '../utils/streak'
 import {
   LayoutDashboard,
   BookOpen,
@@ -207,6 +208,7 @@ export default function Dashboard({ session }) {
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [retrySubject, setRetrySubject] = useState(null)
   const [retrySubtopic, setRetrySubtopic] = useState(null)
+  const [streak, setStreak] = useState(0)
 
   useEffect(() => {
     fetchData()
@@ -214,6 +216,7 @@ export default function Dashboard({ session }) {
 
   async function fetchData() {
     setLoading(true)
+
     const { data: profileData } = await supabase
       .from('profiles')
       .select('*')
@@ -233,6 +236,13 @@ export default function Dashboard({ session }) {
       .select('*')
       .eq('user_id', session.user.id)
     setSubtopics(subtopicsData || [])
+
+    const { data: streakData } = await supabase
+      .from('study_streaks')
+      .select('study_date')
+      .eq('user_id', session.user.id)
+    setStreak(calculateStreak(streakData?.map(s => s.study_date) || []))
+
     setLoading(false)
   }
 
@@ -408,6 +418,7 @@ export default function Dashboard({ session }) {
             subtopics={subtopics}
             getProgress={getProgress}
             profile={profile}
+            streak={streak}
             onAddSubject={() => setPage('add')}
             onStudy={handleStudy}
           />
@@ -432,7 +443,7 @@ export default function Dashboard({ session }) {
   )
 }
 
-function DashboardHome({ subjects, subtopics, getProgress, profile, onAddSubject, onStudy }) {
+function DashboardHome({ subjects, subtopics, getProgress, profile, streak, onAddSubject, onStudy }) {
   const totalDone = subjects.reduce((acc, s) => acc + getProgress(s.id).done, 0)
   const totalTopics = subjects.reduce((acc, s) => acc + getProgress(s.id).total, 0)
 
@@ -498,9 +509,9 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, onAddSubject
           { label: 'Subjects', value: subjects.length, sub: 'This semester' },
           { label: 'Topics done', value: totalDone, sub: `of ${totalTopics} total` },
           {
-            label: 'Next exam',
-            value: upcoming ? `${daysUntil(upcoming.exam_date)}d` : '—',
-            sub: upcoming ? upcoming.name : 'No upcoming exams',
+            label: 'Study streak',
+            value: streak > 0 ? `${streak} 🔥` : '0',
+            sub: streak > 0 ? `${streak} day${streak > 1 ? 's' : ''} in a row` : 'Complete a quiz to start',
           },
         ].map(stat => (
           <motion.div key={stat.label} className="bg-white rounded-2xl border border-emerald-100 p-5" variants={cardItem}>

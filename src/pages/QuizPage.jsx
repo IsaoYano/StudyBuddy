@@ -145,6 +145,12 @@ export default function QuizPage({ subject, subtopic, session, onBack, onComplet
       score,
       total,
     })
+
+    const today = new Date().toISOString().split('T')[0]
+    await supabase.from('study_streaks').upsert(
+      { user_id: session.user.id, study_date: today },
+      { onConflict: 'user_id,study_date' }
+    )
   }
 
   function getMCQScore() {
