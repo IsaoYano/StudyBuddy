@@ -205,6 +205,8 @@ export default function Dashboard({ session }) {
   const [quizSubtopic, setQuizSubtopic] = useState(null)
   const [editingSubject, setEditingSubject] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [retrySubject, setRetrySubject] = useState(null)
+  const [retrySubtopic, setRetrySubtopic] = useState(null)
 
   useEffect(() => {
     fetchData()
@@ -268,6 +270,25 @@ export default function Dashboard({ session }) {
     await supabase.from('subjects').delete().eq('id', deleteConfirm)
     setDeleteConfirm(null)
     fetchData()
+  }
+
+  async function handleRetryQuiz(subjectId, subtopicId) {
+    let subject = subjects.find(s => s.id === subjectId)
+    let subtopic = subtopics.find(s => s.id === subtopicId)
+
+    if (!subject) {
+      const { data } = await supabase.from('subjects').select('*').eq('id', subjectId).single()
+      subject = data
+    }
+    if (!subtopic) {
+      const { data } = await supabase.from('subtopics').select('*').eq('id', subtopicId).single()
+      subtopic = data
+    }
+    if (!subject || !subtopic) return
+
+    setRetrySubject(subject)
+    setRetrySubtopic(subtopic)
+    setPage('retry')
   }
 
   if (page === 'add') {
@@ -344,6 +365,19 @@ export default function Dashboard({ session }) {
     )
   }
 
+  if (page === 'retry' && retrySubject && retrySubtopic) {
+    return (
+      <QuizPage
+        subject={retrySubject}
+        subtopic={retrySubtopic}
+        session={session}
+        studentLanguage="English"
+        onBack={() => { setRetrySubject(null); setRetrySubtopic(null); setPage('history') }}
+        onComplete={() => { setRetrySubject(null); setRetrySubtopic(null); setPage('history'); fetchData() }}
+      />
+    )
+  }
+
   return (
     <div className="min-h-screen bg-emerald-50 flex">
       <AnimatePresence>
@@ -389,7 +423,7 @@ export default function Dashboard({ session }) {
             onDelete={handleDeleteSubject}
           />
         ) : page === 'history' ? (
-          <HistoryPage session={session} />
+          <HistoryPage session={session} onRetryQuiz={handleRetryQuiz} />
         ) : page === 'settings' ? (
           <SettingsPage session={session} />
         ) : null}

@@ -1,8 +1,9 @@
+import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { History, ListChecks, PencilLine, FileText, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { History, ListChecks, PencilLine, FileText, TrendingUp, TrendingDown } from 'lucide-react'
 
-export default function HistoryPage({ session }) {
+export default function HistoryPage({ session, onRetryQuiz }) {
   const [quizResults, setQuizResults] = useState([])
   const [subjects, setSubjects] = useState([])
   const [subtopics, setSubtopics] = useState([])
@@ -14,7 +15,6 @@ export default function HistoryPage({ session }) {
 
   async function fetchHistory() {
     setLoading(true)
-
     const { data: quizData } = await supabase
       .from('quiz_results')
       .select('*')
@@ -234,6 +234,16 @@ export default function HistoryPage({ session }) {
                       </div>
                     )}
                     <div className="text-xs text-gray-400 mt-2">{formatDate(result.created_at)}</div>
+                    {onRetryQuiz && result.subject_id && result.subtopic_id && (
+                      <motion.button
+                        onClick={() => onRetryQuiz(result.subject_id, result.subtopic_id)}
+                        className="mt-2 text-xs text-emerald-600 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition-colors"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.97 }}
+                      >
+                        Retry quiz
+                      </motion.button>
+                    )}
                   </div>
                 </div>
               </div>
