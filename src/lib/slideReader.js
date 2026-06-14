@@ -48,26 +48,44 @@ Example format:
 export function readPDFText(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
+
     reader.onload = async (e) => {
       try {
         const arrayBuffer = e.target.result
         const uint8Array = new Uint8Array(arrayBuffer)
 
-        // Load pdfjs from CDN dynamically
-        if (!window.pdfjsLib) {
-          await new Promise((res, rej) => {
-            const script = document.createElement('script')
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
-            script.crossOrigin = 'anonymous'
-            script.onload = res
-            script.onerror = rej
-            document.head.appendChild(script)
-          })
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
-        }
+        const loadPDFJS = () => new Promise((res, rej) => {
+          if (window.pdfjsLib) {
+            res(window.pdfjsLib)
+            return
+          }
+          const script = document.createElement('script')
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+          script.crossOrigin = 'anonymous'
+          script.referrerPolicy = 'no-referrer'
+          script.onload = () => {
+            if (window.pdfjsLib) {
+              window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+              res(window.pdfjsLib)
+            } else if (window['pdfjs-dist/build/pdf']) {
+              const lib = window['pdfjs-dist/build/pdf']
+              lib.GlobalWorkerOptions.workerSrc =
+                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+              res(lib)
+            } else {
+              rej(new Error('PDF.js did not load correctly'))
+            }
+          }
+          script.onerror = () => rej(new Error('Failed to load PDF.js from CDN'))
+          document.head.appendChild(script)
+        })
 
-        const pdf = await window.pdfjsLib.getDocument({ data: uint8Array }).promise
+        const pdfjsLib = await loadPDFJS()
+
+        const loadingTask = pdfjsLib.getDocument({ data: uint8Array })
+        const pdf = await loadingTask.promise
+
         let fullText = ''
         for (let i = 1; i <= Math.min(pdf.numPages, 40); i++) {
           const page = await pdf.getPage(i)
@@ -75,11 +93,18 @@ export function readPDFText(file) {
           const pageText = content.items.map(item => item.str).join(' ')
           fullText += `\nSlide ${i}: ${pageText}`
         }
+
+        if (!fullText.trim() || fullText.trim().length < 30) {
+          reject(new Error('Could not extract text from this PDF. Try a PDF with selectable text.'))
+          return
+        }
+
         resolve(fullText)
       } catch (err) {
         reject(err)
       }
     }
+
     reader.onerror = () => reject(new Error('File read error'))
     reader.readAsArrayBuffer(file)
   })
