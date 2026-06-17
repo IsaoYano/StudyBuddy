@@ -74,7 +74,7 @@ export default function TutorPage({ subject, subtopic, studentProfile, onBack, o
   }
 
   return (
-    <div className="min-h-screen bg-emerald-50 flex flex-col">
+    <div className="h-screen bg-emerald-50 flex flex-col overflow-hidden">
 
       <div className="bg-white border-b border-emerald-100 px-6 py-4 flex items-center gap-4">
         <button onClick={onBack} className="text-sm text-gray-400 hover:text-emerald-600 transition-colors">
@@ -174,7 +174,7 @@ export default function TutorPage({ subject, subtopic, studentProfile, onBack, o
               <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0 mr-3 mt-1">
                 <BrainCircuit size={14} strokeWidth={2} className="text-white" />
               </div>
-              <div className="bg-white border border-emerald-100 px-4 py-3 rounded-2xl rounded-tl-sm">
+              <div className="bg-white border-b border-emerald-100 px-6 py-4 flex items-center gap-4 sticky top-0 z-10">
                 <div className="flex gap-1 items-center h-5">
                   <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                   <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
