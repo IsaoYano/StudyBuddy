@@ -1,3 +1,4 @@
+import LoadingScreen from '../components/LoadingScreen'
 import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
@@ -111,11 +112,7 @@ export default function HistoryPage({ session, onRetryQuiz }) {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-sm text-gray-400">Loading history...</div>
-      </div>
-    )
+    return <LoadingScreen message="Loading your history..." />
   }
 
   const avgScore = getAvgScore()

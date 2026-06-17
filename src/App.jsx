@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import AuthPage from './pages/AuthPage'
 import Dashboard from './pages/Dashboard'
+import LoadingScreen from './components/LoadingScreen'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -20,14 +21,7 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-emerald-50">
-      <div className="text-center">
-        <div className="text-2xl font-bold text-emerald-700 mb-2">StudyBuddy</div>
-        <div className="text-sm text-gray-400">Loading...</div>
-      </div>
-    </div>
-  )
+  if (loading) return <LoadingScreen message="Starting up..." />
 
   return session ? <Dashboard session={session} /> : <AuthPage />
 }

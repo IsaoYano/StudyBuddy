@@ -1,3 +1,4 @@
+import LoadingScreen from '../components/LoadingScreen'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -43,11 +44,7 @@ export default function SettingsPage({ session, onNameUpdate }) {
   }
 
   if (fetchLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-sm text-gray-400">Loading settings...</div>
-      </div>
-    )
+    return <LoadingScreen message="Loading settings..." />
   }
 
   return (

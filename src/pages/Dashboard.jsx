@@ -1,3 +1,4 @@
+import LoadingScreen from '../components/LoadingScreen'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import AddSubjectPage from './AddSubjectPage'
@@ -410,7 +411,7 @@ export default function Dashboard({ session }) {
       <div className="ml-56 flex-1 p-8">
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="text-sm text-gray-400">Loading...</div>
+              <LoadingScreen message="Loading your subjects..." />
           </div>
         ) : page === 'dashboard' ? (
           <DashboardHome
