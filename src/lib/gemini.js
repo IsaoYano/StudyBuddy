@@ -35,33 +35,47 @@ TEACHING RULES:
 8. Respond in ${studentProfile.language}. If the student switches language, match them.
 9. Keep responses focused and conversational. Do not dump all content at once.`
 
-  const messages = [
-    { role: 'system', content: systemPrompt },
-    ...conversationHistory.map(msg => ({
-      role: msg.role === 'model' ? 'assistant' : msg.role,
-      content: msg.parts[0].text
-    }))
-  ]
+  const recentHistory = conversationHistory.slice(-6)
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${getGroqKey()}`
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: messages,
-      max_tokens: 1024,
-      temperature: 0.7
-    })
-  })
+const messages = [
+  { role: 'system', content: systemPrompt },
+  ...recentHistory.map(msg => ({
+    role: msg.role === 'model' ? 'assistant' : msg.role,
+    content: msg.parts[0].text
+  }))
+]
 
-  const data = await response.json()
+  let lastError = null
 
-  if (!response.ok) {
-    throw new Error(JSON.stringify(data.error) || 'Groq API error')
-  }
+    for (const key of GROQ_KEYS) {
+      try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${key}`
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: messages,
+            max_tokens: 1024,
+            temperature: 0.7
+          })
+        })
 
-  return data.choices[0].message.content
+        const data = await response.json()
+
+        if (!response.ok) {
+          lastError = data.error
+          continue
+        }
+
+        return data.choices[0].message.content
+      } catch (err) {
+        lastError = err
+        continue
+      }
+    }
+
+    throw new Error(JSON.stringify(lastError) || 'All Groq keys failed')
 }

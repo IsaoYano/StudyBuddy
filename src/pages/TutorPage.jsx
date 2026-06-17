@@ -1,3 +1,4 @@
+import ReactMarkdown from 'react-markdown'
 import { BrainCircuit } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { sendMessage } from '../lib/gemini'
@@ -130,13 +131,33 @@ export default function TutorPage({ subject, subtopic, studentProfile, onBack, o
                   <BrainCircuit size={14} strokeWidth={2} className="text-white" />
                 </div>
               )}
-              <div className={`max-w-xl px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+              <div className={`max-w-xl px-4 py-3 rounded-2xl text-sm leading-relaxed ${
                 msg.role === 'user'
                   ? 'bg-emerald-600 text-white rounded-tr-sm'
                   : 'bg-white border border-emerald-100 text-gray-700 rounded-tl-sm'
-              }`}>
-                {msg.text}
-              </div>
+                }`}>
+                  {msg.role === 'user' ? (
+                    msg.text
+                  ) : (
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                        strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+                        em: ({ children }) => <em className="italic">{children}</em>,
+                        ul: ({ children }) => <ul className="list-disc pl-4 mb-2 flex flex-col gap-1">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 flex flex-col gap-1">{children}</ol>,
+                        li: ({ children }) => <li className="text-sm">{children}</li>,
+                        h1: ({ children }) => <h1 className="font-bold text-base mb-1">{children}</h1>,
+                        h2: ({ children }) => <h2 className="font-bold text-sm mb-1">{children}</h2>,
+                        h3: ({ children }) => <h3 className="font-semibold text-sm mb-1">{children}</h3>,
+                        code: ({ children }) => <code className="bg-emerald-50 text-emerald-800 px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>,
+                        blockquote: ({ children }) => <blockquote className="border-l-2 border-emerald-300 pl-3 text-gray-500 italic my-2">{children}</blockquote>,
+                      }}
+                    >
+                      {msg.text}
+                    </ReactMarkdown>
+                  )}
+                </div>
             </motion.div>
           ))}
         </AnimatePresence>
