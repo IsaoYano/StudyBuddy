@@ -1,4 +1,12 @@
-const GROQ_KEY = import.meta.env.VITE_GROQ_KEY
+const GROQ_KEYS = [
+  import.meta.env.VITE_GROQ_KEY,
+  import.meta.env.VITE_GROQ_KEY_2,
+  import.meta.env.VITE_GROQ_KEY_3,
+].filter(Boolean)
+
+function getGroqKey() {
+  return GROQ_KEYS[Math.floor(Math.random() * GROQ_KEYS.length)]
+}
 
 export async function sendMessage(conversationHistory, studentProfile) {
 
@@ -39,7 +47,7 @@ TEACHING RULES:
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${GROQ_KEY}`
+      'Authorization': `Bearer ${getGroqKey()}`
     },
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
