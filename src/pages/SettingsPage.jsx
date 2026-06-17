@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-export default function SettingsPage({ session }) {
+export default function SettingsPage({ session, onNameUpdate }) {
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
   const [fetchLoading, setFetchLoading] = useState(true)
@@ -36,18 +36,10 @@ export default function SettingsPage({ session }) {
     if (error) {
       setError('Could not save changes. Please try again.')
     } else {
-      setMessage('Profile updated. Refreshing...')
-      setTimeout(() => window.location.reload(), 800)
+      setMessage('Profile updated successfully.')
+      if (onNameUpdate) onNameUpdate(name)
     }
     setLoading(false)
-  }
-
-  async function handleDeleteAccount() {
-    const confirmed = window.confirm(
-      'Are you sure you want to delete your account? This will permanently delete all your subjects, subtopics, and quiz results. This cannot be undone.'
-    )
-    if (!confirmed) return
-    await supabase.auth.signOut()
   }
 
   if (fetchLoading) {
@@ -133,16 +125,14 @@ export default function SettingsPage({ session }) {
         <div className="bg-white rounded-2xl border border-red-100 p-6">
           <h2 className="text-sm font-semibold text-red-700 mb-1">Danger zone</h2>
           <p className="text-xs text-gray-400 mb-4">
-            Signing out will end your current session. Deleting your account will permanently remove all your data.
+            Signing out will end your current session.
           </p>
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={() => supabase.auth.signOut()}
-              className="w-full border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 transition-colors"
-            >
-              Sign out
-            </button>
-          </div>
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="w-full border border-gray-200 text-gray-600 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 transition-colors"
+          >
+            Sign out
+          </button>
         </div>
 
       </div>

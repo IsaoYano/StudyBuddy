@@ -436,7 +436,10 @@ export default function Dashboard({ session }) {
         ) : page === 'history' ? (
           <HistoryPage session={session} onRetryQuiz={handleRetryQuiz} />
         ) : page === 'settings' ? (
-          <SettingsPage session={session} />
+          <SettingsPage session
+          session={session}
+          onNameUpdate={(newName) => setProfile(prev => ({ ...prev, name: newName }))}
+          />
         ) : null}
       </div>
     </div>
