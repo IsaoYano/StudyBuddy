@@ -1,3 +1,6 @@
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
+import 'katex/dist/katex.min.css'
 import ReactMarkdown from 'react-markdown'
 import { BrainCircuit } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
@@ -249,6 +252,8 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
                   msg.text
                 ) : (
                   <ReactMarkdown
+                    remarkPlugins={[remarkMath]}
+                    rehypePlugins={[rehypeKatex]}
                     components={{
                       p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
                       strong: ({ children }) => <strong className="font-bold">{children}</strong>,
