@@ -1,3 +1,4 @@
+import FlashcardPage from './FlashcardPage'
 import LoadingScreen from '../components/LoadingScreen'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
@@ -207,10 +208,10 @@ export default function Dashboard({ session, darkMode, setDarkMode }) {
   const [retrySubject, setRetrySubject] = useState(null)
   const [retrySubtopic, setRetrySubtopic] = useState(null)
   const [streak, setStreak] = useState(0)
+  const [flashcardSubject, setFlashcardSubject] = useState(null)
+  const [flashcardSubtopic, setFlashcardSubtopic] = useState(null)
 
-  useEffect(() => {
-    fetchData()
-  }, [])
+  useEffect(() => { fetchData() }, [])
 
   async function fetchData() {
     setLoading(true)
@@ -252,6 +253,12 @@ export default function Dashboard({ session, darkMode, setDarkMode }) {
     setPage('directquiz')
   }
 
+  function handleFlashcard(subject, subtopic) {
+    setFlashcardSubject(subject)
+    setFlashcardSubtopic(subtopic)
+    setPage('flashcard')
+  }
+
   function handleEditSubject(subject) {
     setEditingSubject(subject)
     setPage('edit')
@@ -286,6 +293,18 @@ export default function Dashboard({ session, darkMode, setDarkMode }) {
 
   if (page === 'add') return <AddSubjectPage session={session} onBack={() => setPage('dashboard')} onSaved={() => { setPage('dashboard'); fetchData() }} />
   if (page === 'edit' && editingSubject) return <EditSubjectPage session={session} subject={editingSubject} onBack={() => setPage('subjects')} onSaved={() => { setPage('subjects'); fetchData() }} />
+
+  if (page === 'flashcard' && flashcardSubject && flashcardSubtopic) {
+    return (
+      <FlashcardPage
+        subject={flashcardSubject}
+        subtopic={flashcardSubtopic}
+        session={session}
+        studentProfile={studentProfile}
+        onBack={() => setPage('subjects')}
+      />
+    )
+  }
 
   if (page === 'directquiz' && quizSubject && quizSubtopic) {
     return <QuizPage subject={quizSubject} subtopic={quizSubtopic} session={session} studentLanguage="English" onBack={() => setPage('subjects')} onComplete={() => { setPage('subjects'); fetchData() }} />
@@ -354,7 +373,7 @@ export default function Dashboard({ session, darkMode, setDarkMode }) {
         ) : page === 'dashboard' ? (
           <DashboardHome subjects={subjects} subtopics={subtopics} getProgress={getProgress} profile={profile} streak={streak} onAddSubject={() => setPage('add')} onStudy={handleStudy} />
         ) : page === 'subjects' ? (
-          <SubjectsPage subjects={subjects} subtopics={subtopics} getProgress={getProgress} toggleSubtopic={toggleSubtopic} onAddSubject={() => setPage('add')} onStudy={handleStudy} onDirectQuiz={handleDirectQuiz} onEdit={handleEditSubject} onDelete={handleDeleteSubject} />
+          <SubjectsPage subjects={subjects} subtopics={subtopics} getProgress={getProgress} toggleSubtopic={toggleSubtopic} onAddSubject={() => setPage('add')} onStudy={handleStudy} onDirectQuiz={handleDirectQuiz} onFlashcard={handleFlashcard} onEdit={handleEditSubject} onDelete={handleDeleteSubject} />
         ) : page === 'history' ? (
           <HistoryPage session={session} onRetryQuiz={handleRetryQuiz} />
         ) : page === 'settings' ? (
@@ -377,7 +396,6 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, onAd
 
   const topSubject = scoredSubjects.find(s => s.progress.done < s.progress.total && daysUntil(s.exam_date) > 0)
   const topSubtopic = topSubject ? subtopics.find(st => st.subject_id === topSubject.id && !st.is_done) : null
-  const upcoming = subjects.find(s => daysUntil(s.exam_date) > 0)
 
   return (
     <motion.div variants={fadeUp} initial="initial" animate="animate">
@@ -390,7 +408,7 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, onAd
 
       {topSubject && topSubtopic && (
         <motion.div
-          className="bg-emerald-700 dark:rounded-2xl rounded-2xl p-5 mb-8 flex items-center justify-between gap-4"
+          className="bg-emerald-700 rounded-2xl p-5 mb-8 flex items-center justify-between gap-4"
           style={{ border: '1px solid var(--border)' }}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -398,19 +416,16 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, onAd
         >
           <div>
             <div className="text-xs font-semibold uppercase tracking-wide mb-1 text-emerald-300 dark:text-emerald-400">Study this next</div>
-            <div className="font-bold text-base text-white dark:app-heading">{topSubject.name}</div>
-            <div className="text-sm mt-0.5 text-emerald-300 dark:app-muted">{topSubtopic.title}</div>
-            <div className="text-xs mt-1 text-emerald-400 dark:app-muted">
+            <div className="font-bold text-base text-white">{topSubject.name}</div>
+            <div className="text-sm mt-0.5 text-emerald-300">{topSubtopic.title}</div>
+            <div className="text-xs mt-1 text-emerald-400">
               {daysUntil(topSubject.exam_date)} days to exam · {topSubject.progress.total - topSubject.progress.done} topics remaining
             </div>
           </div>
           <motion.button
             onClick={() => onStudy(topSubject, topSubtopic)}
             className="font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors flex-shrink-0"
-            style={{
-              backgroundColor: 'var(--surface)',
-              color: 'var(--primary)',
-            }}
+            style={{ backgroundColor: 'var(--surface)', color: 'var(--primary)' }}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
           >
@@ -505,7 +520,7 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, onAd
   )
 }
 
-function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddSubject, onStudy, onDirectQuiz, onEdit, onDelete }) {
+function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddSubject, onStudy, onDirectQuiz, onFlashcard, onEdit, onDelete }) {
   return (
     <motion.div variants={fadeUp} initial="initial" animate="animate">
       <div className="flex items-center justify-between mb-8">
@@ -598,6 +613,15 @@ function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddS
                         </div>
                         <span className={`text-sm ${subtopic.is_done ? 'line-through opacity-60' : ''}`}>{subtopic.title}</span>
                       </button>
+                      <motion.button
+                        onClick={() => onFlashcard(subject, subtopic)}
+                        className="text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors flex-shrink-0"
+                        style={{ backgroundColor: 'var(--surface-soft)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.96 }}
+                      >
+                        Cards
+                      </motion.button>
                       <motion.button
                         onClick={() => onDirectQuiz(subject, subtopic)}
                         className="text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors flex-shrink-0"

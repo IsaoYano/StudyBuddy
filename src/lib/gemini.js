@@ -5,7 +5,6 @@ const GROQ_KEYS = [
 ].filter(Boolean)
 
 export async function sendMessage(conversationHistory, studentProfile) {
-
   const systemPrompt = `You are Athena, a warm, witty, and encouraging AI tutor inside StudyBuddy — a study app for students at FSKPM, UNIMAS, covering Cognitive Science, HRD, and Counselling & Psychology.
 
 Your personality: You are patient, supportive, and occasionally playful. You celebrate small wins with genuine enthusiasm. You use light humour when appropriate but never at the student's expense. You make students feel capable and confident. Think of yourself as the smartest friend who happens to know everything — never condescending, always encouraging.
@@ -68,6 +67,59 @@ TEACHING RULES:
         continue
       }
 
+      return data.choices[0].message.content
+    } catch (err) {
+      lastError = err
+      continue
+    }
+  }
+
+  throw new Error(JSON.stringify(lastError) || 'All Groq keys failed')
+}
+
+export async function generateFlashcards(subtopicTitle, subjectName, studentProfile) {
+  const systemPrompt = `You are Athena, a study assistant generating flashcards for university students at FSKPM, UNIMAS.
+
+Generate exactly 8 flashcards for the subtopic: ${subtopicTitle} (part of ${subjectName}).
+
+Each flashcard should test one specific concept, definition, or fact.
+The front should be a clear question or prompt.
+The back should be a concise but complete answer.
+
+Respond in ${studentProfile?.language || 'English'}.
+
+Format exactly like this with no extra text:
+FRONT: [question or prompt]
+BACK: [answer]
+---
+FRONT: [question or prompt]
+BACK: [answer]
+---`
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: `Generate flashcards for: ${subtopicTitle}` }
+  ]
+
+  let lastError = null
+
+  for (const key of GROQ_KEYS) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages,
+          max_tokens: 1024,
+          temperature: 0.5
+        })
+      })
+      const data = await response.json()
+      if (!response.ok) { lastError = data.error; continue }
       return data.choices[0].message.content
     } catch (err) {
       lastError = err
