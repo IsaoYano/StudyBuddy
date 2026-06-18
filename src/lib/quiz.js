@@ -4,14 +4,52 @@ const GROQ_KEYS = [
   import.meta.env.VITE_GROQ_KEY_3,
 ].filter(Boolean)
 
-function getGroqKey() {
-  return GROQ_KEYS[Math.floor(Math.random() * GROQ_KEYS.length)]
+async function groqFetch(systemPrompt, userMessage, maxTokens = 2048) {
+  let lastError = null
+  for (const key of GROQ_KEYS) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage }
+          ],
+          max_tokens: maxTokens,
+          temperature: 0.5
+        })
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        lastError = data.error
+        continue
+      }
+      return data.choices[0].message.content
+    } catch (err) {
+      lastError = err
+      continue
+    }
+  }
+  throw new Error(JSON.stringify(lastError) || 'All Groq keys failed')
 }
 
 export async function generateQuiz(subtopicTitle, subjectName, quizType, difficulty, conversationHistory, language = 'English') {
 
+  const questionCount = {
+    mcq: { beginner: 10, intermediate: 15, advanced: 20 },
+    structured: { beginner: 3, intermediate: 5, advanced: 7 },
+    essay: { beginner: 1, intermediate: 2, advanced: 3 },
+  }
+
+  const count = questionCount[quizType][difficulty]
+
   const typeInstructions = {
-    mcq: `Generate 5 multiple choice questions. For each question provide:
+    mcq: `Generate ${count} multiple choice questions. For each question provide:
 - The question text
 - Four options labeled A, B, C, D
 - The correct answer letter
@@ -26,7 +64,7 @@ D) [option]
 Answer: [letter]
 Explanation: [explanation]
 ---`,
-    structured: `Generate 3 structured questions that require a written answer of 2-4 sentences. For each question provide:
+    structured: `Generate ${count} structured questions that require a written answer of 2-4 sentences. For each question provide:
 - The question text
 - A model answer the student can compare against
 
@@ -34,7 +72,7 @@ Format each question exactly like this:
 Q1: [question]
 Model Answer: [answer]
 ---`,
-    essay: `Generate 1 essay question that requires a detailed response. Provide:
+    essay: `Generate ${count} essay question${count > 1 ? 's' : ''} that require a detailed response. For each provide:
 - The essay question
 - Key points that a good answer should cover (5-7 bullet points)
 
@@ -66,26 +104,7 @@ ${languageInstruction}
 ${typeInstructions[quizType]}
 Generate only the questions in the exact format specified. No introduction, no extra text.`
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${getGroqKey()}`
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Generate ${quizType} questions about ${subtopicTitle}.` }
-      ],
-      max_tokens: 2048,
-      temperature: 0.5
-    })
-  })
-
-  const data = await response.json()
-  if (!response.ok) throw new Error(data.error?.message || 'Quiz generation failed')
-  return data.choices[0].message.content
+  return await groqFetch(systemPrompt, `Generate ${quizType} questions about ${subtopicTitle}.`, 4096)
 }
 
 export async function evaluateAnswer(question, studentAnswer, modelAnswer, subtopicTitle, language = 'English') {
@@ -110,24 +129,5 @@ Respond in exactly this format:
 Score: [number from 0 to 10]
 Feedback: [2-3 sentences of supportive, constructive, specific feedback]`
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${GROQ_KEY}`
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: 'Evaluate this answer.' }
-      ],
-      max_tokens: 512,
-      temperature: 0.3
-    })
-  })
-
-  const data = await response.json()
-  if (!response.ok) throw new Error(data.error?.message || 'Evaluation failed')
-  return data.choices[0].message.content
+  return await groqFetch(systemPrompt, 'Evaluate this answer.', 512)
 }

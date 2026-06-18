@@ -62,25 +62,37 @@ export default function QuizPage({ subject, subtopic, session, onBack, onComplet
     setLoading(false)
   }
 
+  
   function parseQuiz(raw, type) {
-    const blocks = raw.split('---').map(b => b.trim()).filter(b => b.length > 0)
     if (type === 'mcq') {
-      return blocks.map((block, i) => {
+      const questions = []
+      const qBlocks = raw.split(/\n(?=Q\d+:)/).map(b => b.trim()).filter(b => b.length > 0)
+      const blocks = qBlocks.length > 1 ? qBlocks : raw.split('---').map(b => b.trim()).filter(b => b.length > 0)
+
+      blocks.forEach((block, i) => {
         const lines = block.split('\n').map(l => l.trim()).filter(l => l)
         const question = lines[0]?.replace(/^Q\d+:\s*/, '') || ''
-        const options = lines.slice(1, 5).map(l => l.replace(/^[A-D]\)\s*/, ''))
+        if (!question) return
+        const options = []
+        lines.forEach(l => {
+          if (/^[A-D]\)/.test(l)) options.push(l.replace(/^[A-D]\)\s*/, ''))
+        })
         const answerLine = lines.find(l => l.startsWith('Answer:'))
         const explanationLine = lines.find(l => l.startsWith('Explanation:'))
-        const correctLetter = answerLine?.replace('Answer:', '').trim() || 'A'
+        const correctLetter = answerLine?.replace('Answer:', '').trim().charAt(0) || 'A'
         const correctIndex = ['A','B','C','D'].indexOf(correctLetter)
-        return {
+        questions.push({
           id: i, type: 'mcq', question, options,
           correct: correctIndex, correctLetter,
           explanation: explanationLine?.replace('Explanation:', '').trim() || '',
-        }
+        })
       })
+      return questions
     }
+
     if (type === 'structured') {
+      const qBlocks = raw.split(/\n(?=Q\d+:)/).map(b => b.trim()).filter(b => b.length > 0)
+      const blocks = qBlocks.length > 1 ? qBlocks : raw.split('---').map(b => b.trim()).filter(b => b.length > 0)
       return blocks.map((block, i) => {
         const lines = block.split('\n').map(l => l.trim()).filter(l => l)
         const question = lines[0]?.replace(/^Q\d+:\s*/, '') || ''
@@ -89,14 +101,23 @@ export default function QuizPage({ subject, subtopic, session, onBack, onComplet
         return { id: i, type: 'structured', question, modelAnswer }
       })
     }
+
     if (type === 'essay') {
-      const questionLine = raw.match(/Essay Question:\s*(.+)/)?.[1] || ''
-      const keyPointsMatch = raw.match(/Key Points:([\s\S]+)/)
-      const keyPoints = keyPointsMatch
-        ? keyPointsMatch[1].split('\n').map(l => l.replace(/^-\s*/, '').trim()).filter(l => l)
-        : []
-      return [{ id: 0, type: 'essay', question: questionLine, keyPoints }]
+      const questions = []
+      const essayBlocks = raw.split(/\n(?=Essay Question:)/).map(b => b.trim()).filter(b => b.length > 0)
+      const blocks = essayBlocks.length > 1 ? essayBlocks : raw.split('---').map(b => b.trim()).filter(b => b.length > 0)
+      blocks.forEach((block, i) => {
+        const questionLine = block.match(/Essay Question:\s*(.+)/)?.[1] || ''
+        if (!questionLine) return
+        const keyPointsMatch = block.match(/Key Points:([\s\S]+)/)
+        const keyPoints = keyPointsMatch
+          ? keyPointsMatch[1].split('\n').map(l => l.replace(/^[-•]\s*/, '').trim()).filter(l => l && !l.startsWith('Essay'))
+          : []
+        questions.push({ id: i, type: 'essay', question: questionLine, keyPoints })
+      })
+      return questions
     }
+
     return []
   }
 
