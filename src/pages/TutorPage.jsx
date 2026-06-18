@@ -86,7 +86,7 @@ export default function TutorPage({ subject, subtopic, studentProfile, onBack, o
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs text-emerald-600 font-medium">AI Tutor active</span>
+          <span className="text-xs text-emerald-600 font-medium">Athena active</span>
         </div>
       </div>
 
@@ -110,9 +110,9 @@ export default function TutorPage({ subject, subtopic, studentProfile, onBack, o
             </svg>
           </div>
           <div>
-            <div className="text-xs font-semibold text-emerald-700 mb-1">StudyBuddy AI Tutor</div>
+            <div className="text-xs font-semibold text-emerald-700 mb-1">Athena — AI Tutor</div>
             <div className="text-xs text-emerald-600">
-              Teaching style personalised to your preferences. Type your answers or questions freely.
+              Your personal tutor, adapted to your learning style. Ask anything freely.
             </div>
           </div>
         </motion.div>

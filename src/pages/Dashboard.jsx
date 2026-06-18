@@ -268,6 +268,25 @@ export default function Dashboard({ session }) {
     setPage('onboarding')
   }
 
+  function handleDirectQuiz(subject, subtopic) {
+    setQuizSubject(subject)
+    setQuizSubtopic(subtopic)
+    setPage('directquiz')
+  }
+
+  if (page === 'directquiz' && quizSubject && quizSubtopic) {
+    return (
+      <QuizPage
+        subject={quizSubject}
+        subtopic={quizSubtopic}
+        session={session}
+        studentLanguage="English"
+        onBack={() => setPage('subjects')}
+        onComplete={() => { setPage('subjects'); fetchData() }}
+      />
+    )
+  }
+
   function handleEditSubject(subject) {
     setEditingSubject(subject)
     setPage('edit')
@@ -431,6 +450,7 @@ export default function Dashboard({ session }) {
             toggleSubtopic={toggleSubtopic}
             onAddSubject={() => setPage('add')}
             onStudy={handleStudy}
+            onDirectQuiz={handleDirectQuiz}
             onEdit={handleEditSubject}
             onDelete={handleDeleteSubject}
           />
@@ -605,7 +625,7 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, onAd
   )
 }
 
-function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddSubject, onStudy, onEdit, onDelete }) {
+function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddSubject, onStudy, onDirectQuiz, onEdit, onDelete }) {
   return (
     <motion.div variants={fadeUp} initial="initial" animate="animate">
       <div className="flex items-center justify-between mb-8">
@@ -717,6 +737,14 @@ function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddS
                           {subtopic.title}
                         </span>
                       </button>
+                      <motion.button
+                        onClick={() => onDirectQuiz(subject, subtopic)}
+                        className="bg-white hover:bg-emerald-50 text-emerald-600 border border-emerald-200 text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors flex-shrink-0"
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.96 }}
+                      >
+                        Quiz
+                      </motion.button>
                       <motion.button
                         onClick={() => onStudy(subject, subtopic)}
                         className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2.5 rounded-xl transition-colors flex-shrink-0"
