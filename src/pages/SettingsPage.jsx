@@ -1,6 +1,8 @@
 import LoadingScreen from '../components/LoadingScreen'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { motion, AnimatePresence } from 'framer-motion'
+import { fadeUp, staggerContainer, cardItem } from '../utils/animations'
 
 export default function SettingsPage({ session, onNameUpdate, darkMode, setDarkMode }) {
   const [name, setName] = useState('')
@@ -9,16 +11,10 @@ export default function SettingsPage({ session, onNameUpdate, darkMode, setDarkM
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    fetchProfile()
-  }, [])
+  useEffect(() => { fetchProfile() }, [])
 
   async function fetchProfile() {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single()
+    const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
     if (data) setName(data.name || '')
     setFetchLoading(false)
   }
@@ -28,12 +24,7 @@ export default function SettingsPage({ session, onNameUpdate, darkMode, setDarkM
     setLoading(true)
     setMessage('')
     setError('')
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({ name })
-      .eq('id', session.user.id)
-
+    const { error } = await supabase.from('profiles').update({ name }).eq('id', session.user.id)
     if (error) {
       setError('Could not save changes. Please try again.')
     } else {
@@ -43,117 +34,141 @@ export default function SettingsPage({ session, onNameUpdate, darkMode, setDarkM
     setLoading(false)
   }
 
-  if (fetchLoading) {
-    return <LoadingScreen />
-  }
+  if (fetchLoading) return <LoadingScreen />
 
   return (
-    <div>
+    <motion.div variants={fadeUp} initial="initial" animate="animate">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-emerald-900 dark:text-emerald-400">Settings</h1>
-        <p className="text-sm text-gray-400 mt-1">Manage your profile and account</p>
+        <h1 className="text-2xl font-bold app-heading">Settings</h1>
+        <p className="text-sm app-muted mt-1">Manage your profile and account</p>
       </div>
 
-      <div className="max-w-lg flex flex-col gap-6">
+      <motion.div
+        className="max-w-lg flex flex-col gap-6"
+        variants={staggerContainer}
+        initial="initial"
+        animate="animate"
+      >
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-emerald-100 dark:border-gray-700 p-6">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4">Profile</h2>
+        <motion.div className="app-card rounded-2xl p-6" variants={cardItem}>
+          <h2 className="text-sm font-semibold app-heading mb-4">Profile</h2>
 
-          {message && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3 mb-4">
-              {message}
-            </div>
-          )}
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">
-              {error}
-            </div>
-          )}
+          <AnimatePresence>
+            {message && (
+              <motion.div
+                className="rounded-xl px-4 py-3 mb-4 text-sm"
+                style={{ backgroundColor: 'var(--primary-soft)', border: '1px solid var(--border)', color: 'var(--primary)' }}
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+              >
+                {message}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm rounded-xl px-4 py-3 mb-4"
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+              >
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <form onSubmit={handleSave} className="flex flex-col gap-4">
             <div>
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 block">Full name</label>
+              <label className="text-xs font-medium app-muted mb-1.5 block">Full name</label>
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder="Your name"
                 required
-                className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
+                className="w-full rounded-xl px-4 py-2.5 text-sm transition-all app-input"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 block">Email</label>
+              <label className="text-xs font-medium app-muted mb-1.5 block">Email</label>
               <input
                 type="email"
                 value={session.user.email}
                 disabled
-                className="w-full border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400 rounded-xl px-4 py-2.5 text-sm bg-gray-50"
+                className="w-full rounded-xl px-4 py-2.5 text-sm app-input opacity-60"
               />
-              <p className="text-xs text-gray-400 mt-1">Email cannot be changed</p>
+              <p className="text-xs app-muted mt-1">Email cannot be changed</p>
             </div>
-            <button
+            <motion.button
               type="submit"
               disabled={loading}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-50 transition-colors"
+              className="text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-50 transition-colors"
+              style={{ backgroundColor: 'var(--primary)' }}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
             >
               {loading ? 'Saving...' : 'Save changes'}
-            </button>
+            </motion.button>
           </form>
-        </div>
+        </motion.div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-emerald-100 dark:border-gray-700 p-6">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Appearance</h2>
-          <p className="text-xs text-gray-400 mb-4">Choose your preferred display mode</p>
+        <motion.div className="app-card rounded-2xl p-6" variants={cardItem}>
+          <h2 className="text-sm font-semibold app-heading mb-1">Appearance</h2>
+          <p className="text-xs app-muted mb-4">Choose your preferred display mode</p>
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium text-gray-700 dark:text-gray-200">Dark mode</div>
-              <div className="text-xs text-gray-400 mt-0.5">Easy on the eyes at night</div>
+              <div className="text-sm font-medium app-heading">Dark mode</div>
+              <div className="text-xs app-muted mt-0.5">Easy on the eyes at night</div>
             </div>
-            <button
+            <motion.button
               onClick={() => setDarkMode(!darkMode)}
-              className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${
-                darkMode ? 'bg-emerald-600' : 'bg-gray-200'
-              }`}
+              className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${darkMode ? 'bg-emerald-600' : 'bg-gray-200'}`}
+              whileTap={{ scale: 0.95 }}
             >
-              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
-                darkMode ? 'translate-x-6' : 'translate-x-0'
-              }`} />
-            </button>
+              <motion.div
+                className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow"
+                animate={{ x: darkMode ? 24 : 0 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              />
+            </motion.button>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-emerald-100 dark:border-gray-700 p-6">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">Account information</h2>
-          <p className="text-xs text-gray-400 mb-4">Details about your StudyBuddy account</p>
+        <motion.div className="app-card rounded-2xl p-6" variants={cardItem}>
+          <h2 className="text-sm font-semibold app-heading mb-1">Account information</h2>
+          <p className="text-xs app-muted mb-4">Details about your StudyBuddy account</p>
           <div className="flex flex-col gap-3">
             {[
               { label: 'Email', value: session.user.email },
               { label: 'Account created', value: new Date(session.user.created_at).toLocaleDateString('en-MY', { day: 'numeric', month: 'long', year: 'numeric' }) },
               { label: 'Faculty', value: 'FSKPM, UNIMAS' },
             ].map(item => (
-              <div key={item.label} className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                <span className="text-xs text-gray-500 dark:text-gray-400">{item.label}</span>
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-200">{item.value}</span>
+              <div key={item.label} className="flex justify-between items-center py-2 last:border-0" style={{ borderBottom: '1px solid var(--border)' }}>
+                <span className="text-xs app-muted">{item.label}</span>
+                <span className="text-xs font-medium app-heading">{item.value}</span>
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-red-100 dark:border-red-900 p-6">
-          <h2 className="text-sm font-semibold text-red-700 mb-1">Danger zone</h2>
-          <p className="text-xs text-gray-400 mb-4">
-            Signing out will end your current session.
-          </p>
-          <button
+        <motion.div className="rounded-2xl p-6" style={{ backgroundColor: 'var(--surface)', border: '1px solid rgba(220,38,38,0.3)' }} variants={cardItem}>
+          <h2 className="text-sm font-semibold text-red-500 mb-1">Danger zone</h2>
+          <p className="text-xs app-muted mb-4">Signing out will end your current session.</p>
+          <motion.button
             onClick={() => supabase.auth.signOut()}
-            className="w-full border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 rounded-xl py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="w-full text-sm font-medium transition-colors py-2.5 rounded-xl app-muted hover:text-red-400"
+            style={{ border: '1px solid var(--border)' }}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.98 }}
           >
             Sign out
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
 
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
