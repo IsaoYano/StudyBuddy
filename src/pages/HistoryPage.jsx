@@ -16,25 +16,12 @@ export default function HistoryPage({ session, onRetryQuiz }) {
 
   async function fetchHistory() {
     setLoading(true)
-    const { data: quizData } = await supabase
-      .from('quiz_results')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false })
+    const { data: quizData } = await supabase.from('quiz_results').select('*').eq('user_id', session.user.id).order('created_at', { ascending: false })
     setQuizResults(quizData || [])
-
-    const { data: subjectsData } = await supabase
-      .from('subjects')
-      .select('*')
-      .eq('user_id', session.user.id)
+    const { data: subjectsData } = await supabase.from('subjects').select('*').eq('user_id', session.user.id)
     setSubjects(subjectsData || [])
-
-    const { data: subtopicsData } = await supabase
-      .from('subtopics')
-      .select('*')
-      .eq('user_id', session.user.id)
+    const { data: subtopicsData } = await supabase.from('subtopics').select('*').eq('user_id', session.user.id)
     setSubtopics(subtopicsData || [])
-
     setLoading(false)
   }
 
@@ -53,25 +40,17 @@ export default function HistoryPage({ session, onRetryQuiz }) {
     })
   }
 
-  function getScoreColor(score, total) {
-    if (!score || !total) return 'text-gray-500'
+  function getScoreStyle(score, total) {
+    if (!score || !total) return { color: 'var(--text-muted)', bg: 'var(--surface-soft)', border: 'var(--border)' }
     const pct = score / total
-    if (pct >= 0.8) return 'text-emerald-600'
-    if (pct >= 0.6) return 'text-amber-600'
-    return 'text-red-500'
-  }
-
-  function getScoreBg(score, total) {
-    if (!score || !total) return 'bg-gray-50 border-gray-200'
-    const pct = score / total
-    if (pct >= 0.8) return 'bg-emerald-50 border-emerald-200'
-    if (pct >= 0.6) return 'bg-amber-50 border-amber-200'
-    return 'bg-red-50 border-red-200'
+    if (pct >= 0.8) return { color: 'var(--primary)', bg: 'var(--primary-soft)', border: 'var(--primary)' }
+    if (pct >= 0.6) return { color: '#d97706', bg: 'rgba(217,119,6,0.12)', border: '#d97706' }
+    return { color: '#dc2626', bg: 'rgba(220,38,38,0.12)', border: '#dc2626' }
   }
 
   function getTypeIcon(type) {
     const props = { size: 18, strokeWidth: 2 }
-    if (type === 'mcq') return <ListChecks {...props} className="text-emerald-600" />
+    if (type === 'mcq') return <ListChecks {...props} style={{ color: 'var(--primary)' }} />
     if (type === 'structured') return <PencilLine {...props} className="text-blue-500" />
     return <FileText {...props} className="text-amber-500" />
   }
@@ -111,9 +90,7 @@ export default function HistoryPage({ session, onRetryQuiz }) {
     return worst ? { name: getSubjectName(worst), score: Math.round(worstScore) } : null
   }
 
-  if (loading) {
-    return <LoadingScreen message="Loading your history..." />
-  }
+  if (loading) return <LoadingScreen />
 
   const avgScore = getAvgScore()
   const strongest = getStrongestSubject()
@@ -122,66 +99,63 @@ export default function HistoryPage({ session, onRetryQuiz }) {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-emerald-900">Study history</h1>
-        <p className="text-sm text-gray-400 mt-1">Your past quiz results and performance analysis</p>
+        <h1 className="text-2xl font-bold app-heading">Study history</h1>
+        <p className="text-sm app-muted mt-1">Your past quiz results and performance analysis</p>
       </div>
 
       {quizResults.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-dashed border-emerald-200 p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto mb-4">
-            <History size={28} strokeWidth={1.5} className="text-emerald-400" />
+        <div className="app-card rounded-2xl p-12 text-center" style={{ borderStyle: 'dashed' }}>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'var(--primary-soft)', border: '1px solid var(--border)' }}>
+            <History size={28} strokeWidth={1.5} style={{ color: 'var(--primary)' }} />
           </div>
-          <div className="text-sm font-semibold text-gray-700 mb-2">No quiz history yet</div>
-          <div className="text-xs text-gray-400 max-w-xs mx-auto leading-relaxed">
+          <div className="text-sm font-semibold app-heading mb-2">No quiz history yet</div>
+          <div className="text-xs app-muted max-w-xs mx-auto leading-relaxed">
             Complete a tutor session and take a quiz to see your results and performance analysis here.
           </div>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-3 gap-4 mb-8">
-            <div className="bg-white rounded-2xl border border-emerald-100 p-5">
-              <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Quizzes taken</div>
-              <div className="text-3xl font-bold text-emerald-800">{quizResults.length}</div>
-              <div className="text-xs text-emerald-500 mt-1">All time</div>
-            </div>
-            <div className="bg-white rounded-2xl border border-emerald-100 p-5">
-              <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">Average MCQ score</div>
-              <div className={`text-3xl font-bold ${avgScore !== null ? (avgScore >= 80 ? 'text-emerald-600' : avgScore >= 60 ? 'text-amber-600' : 'text-red-500') : 'text-emerald-800'}`}>
-                {avgScore !== null ? `${avgScore}%` : '—'}
+            {[
+              { label: 'Quizzes taken', value: quizResults.length, sub: 'All time' },
+              {
+                label: 'Average MCQ score',
+                value: avgScore !== null ? `${avgScore}%` : '—',
+                sub: 'MCQ quizzes only',
+                valueColor: avgScore !== null ? (avgScore >= 80 ? 'var(--primary)' : avgScore >= 60 ? '#d97706' : '#dc2626') : 'var(--text-main)',
+              },
+              { label: 'MCQ quizzes', value: quizResults.filter(r => r.quiz_type === 'mcq').length, sub: 'Multiple choice' },
+            ].map(stat => (
+              <div key={stat.label} className="app-card rounded-2xl p-5">
+                <div className="text-xs font-medium uppercase tracking-wide mb-2 app-muted">{stat.label}</div>
+                <div className="text-3xl font-bold app-heading" style={stat.valueColor ? { color: stat.valueColor } : {}}>{stat.value}</div>
+                <div className="text-xs mt-1" style={{ color: 'var(--primary)' }}>{stat.sub}</div>
               </div>
-              <div className="text-xs text-emerald-500 mt-1">MCQ quizzes only</div>
-            </div>
-            <div className="bg-white rounded-2xl border border-emerald-100 p-5">
-              <div className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">MCQ quizzes</div>
-              <div className="text-3xl font-bold text-emerald-800">
-                {quizResults.filter(r => r.quiz_type === 'mcq').length}
-              </div>
-              <div className="text-xs text-emerald-500 mt-1">Multiple choice</div>
-            </div>
+            ))}
           </div>
 
           {(strongest || weakest) && (
             <div className="grid grid-cols-2 gap-4 mb-8">
               {strongest && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                    <TrendingUp size={18} strokeWidth={2} className="text-emerald-600" />
+                <div className="rounded-2xl p-5 flex items-start gap-3" style={{ backgroundColor: 'var(--primary-soft)', border: '1px solid var(--border)' }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--primary-soft)', border: '1px solid var(--border)' }}>
+                    <TrendingUp size={18} strokeWidth={2} style={{ color: 'var(--primary)' }} />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-1">Strongest subject</div>
-                    <div className="text-sm font-bold text-emerald-900 truncate">{strongest.name}</div>
-                    <div className="text-xs text-emerald-600 mt-0.5">Average: {strongest.score}%</div>
+                    <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--primary)' }}>Strongest subject</div>
+                    <div className="text-sm font-bold app-heading truncate">{strongest.name}</div>
+                    <div className="text-xs mt-0.5" style={{ color: 'var(--primary)' }}>Average: {strongest.score}%</div>
                   </div>
                 </div>
               )}
               {weakest && weakest.name !== strongest?.name && (
-                <div className="bg-red-50 border border-red-200 rounded-2xl p-5 flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                <div className="rounded-2xl p-5 flex items-start gap-3" style={{ backgroundColor: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.3)' }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(220,38,38,0.12)', border: '1px solid rgba(220,38,38,0.2)' }}>
                     <TrendingDown size={18} strokeWidth={2} className="text-red-500" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-1">Needs more study</div>
-                    <div className="text-sm font-bold text-red-900 truncate">{weakest.name}</div>
+                    <div className="text-xs font-semibold uppercase tracking-wide mb-1 text-red-500">Needs more study</div>
+                    <div className="text-sm font-bold app-heading truncate">{weakest.name}</div>
                     <div className="text-xs text-red-500 mt-0.5">Average: {weakest.score}% — review this subject</div>
                   </div>
                 </div>
@@ -190,61 +164,57 @@ export default function HistoryPage({ session, onRetryQuiz }) {
           )}
 
           <div className="flex flex-col gap-4">
-            {quizResults.map(result => (
-              <div key={result.id} className="bg-white rounded-2xl border border-emerald-100 p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0">
-                      {getTypeIcon(result.quiz_type)}
+            {quizResults.map(result => {
+              const scoreStyle = getScoreStyle(result.score, result.total)
+              return (
+                <div key={result.id} className="app-card rounded-2xl p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--surface-soft)', border: '1px solid var(--border)' }}>
+                        {getTypeIcon(result.quiz_type)}
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold app-heading">{getSubjectName(result.subject_id)}</div>
+                        <div className="text-xs app-muted mt-0.5">{getSubtopicName(result.subtopic_id)}</div>
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                          <span className="text-xs px-2 py-0.5 rounded-lg capitalize" style={{ backgroundColor: 'var(--primary-soft)', color: 'var(--primary)', border: '1px solid var(--border)' }}>
+                            {result.quiz_type}
+                          </span>
+                          <span className="text-xs px-2 py-0.5 rounded-lg capitalize app-muted" style={{ backgroundColor: 'var(--surface-soft)', border: '1px solid var(--border)' }}>
+                            {result.difficulty}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-sm font-bold text-gray-800">
-                        {getSubjectName(result.subject_id)}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        {getSubtopicName(result.subtopic_id)}
-                      </div>
-                      <div className="flex items-center gap-2 mt-2 flex-wrap">
-                        <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-lg capitalize">
-                          {result.quiz_type}
-                        </span>
-                        <span className="text-xs bg-gray-50 text-gray-600 border border-gray-200 px-2 py-0.5 rounded-lg capitalize">
-                          {result.difficulty}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
 
-                  <div className="text-right flex-shrink-0">
-                    {result.score !== null && result.total !== null ? (
-                      <div className={`inline-flex flex-col items-center px-3 py-2 rounded-xl border ${getScoreBg(result.score, result.total)}`}>
-                        <div className={`text-xl font-bold ${getScoreColor(result.score, result.total)}`}>
-                          {result.score}/{result.total}
+                    <div className="text-right flex-shrink-0">
+                      {result.score !== null && result.total !== null ? (
+                        <div className="inline-flex flex-col items-center px-3 py-2 rounded-xl" style={{ backgroundColor: scoreStyle.bg, border: `1px solid ${scoreStyle.border}` }}>
+                          <div className="text-xl font-bold" style={{ color: scoreStyle.color }}>{result.score}/{result.total}</div>
+                          <div className="text-xs font-medium" style={{ color: scoreStyle.color }}>{Math.round((result.score / result.total) * 100)}%</div>
                         </div>
-                        <div className={`text-xs font-medium ${getScoreColor(result.score, result.total)}`}>
-                          {Math.round((result.score / result.total) * 100)}%
+                      ) : (
+                        <div className="text-xs app-muted px-3 py-2 rounded-xl" style={{ backgroundColor: 'var(--surface-soft)', border: '1px solid var(--border)' }}>
+                          Written answer
                         </div>
-                      </div>
-                    ) : (
-                      <div className="text-xs text-gray-400 bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl">
-                        Written answer
-                      </div>
-                    )}
-                    <div className="text-xs text-gray-400 mt-2">{formatDate(result.created_at)}</div>
-                    {onRetryQuiz && result.subject_id && result.subtopic_id && (
-                      <motion.button
-                        onClick={() => onRetryQuiz(result.subject_id, result.subtopic_id)}
-                        className="mt-2 text-xs text-emerald-600 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition-colors"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.97 }}
-                      >
-                        Retry quiz
-                      </motion.button>
-                    )}
+                      )}
+                      <div className="text-xs app-muted mt-2">{formatDate(result.created_at)}</div>
+                      {onRetryQuiz && result.subject_id && result.subtopic_id && (
+                        <motion.button
+                          onClick={() => onRetryQuiz(result.subject_id, result.subtopic_id)}
+                          className="mt-2 text-xs px-3 py-1.5 rounded-lg transition-colors"
+                          style={{ color: 'var(--primary)', border: '1px solid var(--border)' }}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.97 }}
+                        >
+                          Retry quiz
+                        </motion.button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </>
       )}

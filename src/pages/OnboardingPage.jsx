@@ -64,14 +64,14 @@ export default function OnboardingPage({ subject, subtopic, onStart, onBack }) {
 
   if (!subject || !subtopic) {
     return (
-      <div className="min-h-screen bg-emerald-50 flex items-center justify-center">
-        <div className="text-sm text-gray-400">Loading...</div>
+      <div className="min-h-screen app-bg flex items-center justify-center">
+        <div className="text-sm app-muted">Loading...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-emerald-50 flex items-center justify-center p-4">
+    <div className="min-h-screen app-bg flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
 
         <motion.div
@@ -82,20 +82,20 @@ export default function OnboardingPage({ subject, subtopic, onStart, onBack }) {
         >
           <button
             onClick={onBack}
-            className="text-sm text-gray-400 hover:text-emerald-600 transition-colors"
+            className="text-sm app-muted transition-colors hover:opacity-80"
           >
             ← Back
           </button>
           <div>
-            <div className="text-xs text-emerald-600 font-medium">{subject.name}</div>
-            <div className="text-xs text-gray-400">Subtopic: {subtopic.title}</div>
+            <div className="text-xs font-medium" style={{ color: 'var(--primary)' }}>{subject.name}</div>
+            <div className="text-xs app-muted">Subtopic: {subtopic.title}</div>
           </div>
         </motion.div>
 
         <AnimatePresence mode="wait">
           <motion.div
             key={step}
-            className="bg-white rounded-2xl border border-emerald-100 p-8 shadow-sm"
+            className="app-card rounded-2xl p-8 shadow-sm"
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -30 }}
@@ -103,16 +103,16 @@ export default function OnboardingPage({ subject, subtopic, onStart, onBack }) {
           >
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-400 font-medium">
+                <span className="text-xs app-muted font-medium">
                   Question {step + 1} of {QUESTIONS.length}
                 </span>
-                <span className="text-xs text-emerald-600 font-medium">
+                <span className="text-xs font-medium" style={{ color: 'var(--primary)' }}>
                   {Math.round(progress)}%
                 </span>
               </div>
-              <div className="bg-gray-200 rounded-full h-1.5">
+              <div className="rounded-full h-1.5 app-progress-track">
                 <motion.div
-                  className="bg-emerald-500 h-1.5 rounded-full"
+                  className="h-1.5 rounded-full app-progress-fill"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -120,7 +120,7 @@ export default function OnboardingPage({ subject, subtopic, onStart, onBack }) {
               </div>
             </div>
 
-            <h2 className="text-lg font-bold text-emerald-900 mb-6">
+            <h2 className="text-lg font-bold app-heading mb-6">
               {current.question}
             </h2>
 
@@ -134,35 +134,36 @@ export default function OnboardingPage({ subject, subtopic, onStart, onBack }) {
                 <motion.button
                   key={option.value}
                   onClick={() => selectAnswer(current.id, option.value)}
-                  className={`flex items-center gap-4 p-4 rounded-xl border text-left transition-all ${
-                    answers[current.id] === option.value
-                      ? 'border-emerald-500 bg-emerald-50 shadow-sm'
-                      : 'border-gray-200 hover:border-emerald-300 hover:bg-gray-50'
-                  }`}
+                  className="flex items-center gap-4 p-4 rounded-xl text-left transition-all"
+                  style={{
+                    border: `1px solid ${answers[current.id] === option.value ? 'var(--primary)' : 'var(--border)'}`,
+                    backgroundColor: answers[current.id] === option.value ? 'var(--primary-soft)' : 'var(--surface-soft)',
+                  }}
                   variants={cardItem}
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                    answers[current.id] === option.value
-                      ? 'border-emerald-500 bg-emerald-500'
-                      : 'border-gray-300'
-                  }`}>
+                  <div
+                    className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all"
+                    style={{
+                      borderColor: answers[current.id] === option.value ? 'var(--primary)' : 'var(--border)',
+                      backgroundColor: answers[current.id] === option.value ? 'var(--primary)' : 'transparent',
+                    }}
+                  >
                     {answers[current.id] === option.value && (
                       <span className="text-white text-xs font-bold">✓</span>
                     )}
                   </div>
                   <div className="flex-1">
-                    <div className={`text-sm font-semibold ${
-                      answers[current.id] === option.value ? 'text-emerald-800' : 'text-gray-800'
-                    }`}>
+                    <div className="text-sm font-semibold" style={{ color: answers[current.id] === option.value ? 'var(--primary)' : 'var(--text-main)' }}>
                       {option.label}
                     </div>
-                    <div className="text-xs text-gray-400 mt-0.5">{option.desc}</div>
+                    <div className="text-xs app-muted mt-0.5">{option.desc}</div>
                   </div>
                   {answers[current.id] === option.value && (
                     <motion.span
-                      className="text-xs font-semibold text-emerald-600 flex-shrink-0"
+                      className="text-xs font-semibold flex-shrink-0"
+                      style={{ color: 'var(--primary)' }}
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.15 }}
@@ -178,12 +179,12 @@ export default function OnboardingPage({ subject, subtopic, onStart, onBack }) {
         </AnimatePresence>
 
         <motion.p
-          className="text-xs text-gray-400 text-center mt-4"
+          className="text-xs app-muted text-center mt-4"
           variants={fadeUp}
           initial="initial"
           animate="animate"
         >
-          Your answers personalise how the AI tutor teaches you
+          Your answers personalise how Athena teaches you
         </motion.p>
 
       </div>

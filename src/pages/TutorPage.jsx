@@ -29,9 +29,6 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
   }, [messages])
 
   async function loadOrCreateSession() {
-    console.log('SESSION USER ID:', session?.user?.id)
-    console.log('SUBTOPIC ID:', subtopic?.id)
-    console.log('SUBJECT ID:', subject?.id)
     setLoadingSession(true)
 
     const { data: existingSession } = await supabase
@@ -52,17 +49,14 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
         const visibleMessages = previousMessages.filter(
           m => !m.content.startsWith('Start teaching me about:')
         )
-
         const loadedMessages = visibleMessages.map(m => ({
           role: m.role === 'model' ? 'ai' : 'user',
           text: m.content
         }))
-
         const loadedHistory = previousMessages.map(m => ({
           role: m.role,
           parts: [{ text: m.content }]
         }))
-
         setMessages(loadedMessages)
         setHistory(loadedHistory)
         setSessionId(existingSession.id)
@@ -76,16 +70,15 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
       return
     }
 
-    const { data: newSession, error: sessionCreateError } = await supabase
+    const { data: newSession } = await supabase
       .from('tutor_sessions')
-      .insert({
+      .upsert({
         user_id: session.user.id,
         subject_id: subject.id,
         subtopic_id: subtopic.id,
-      }, {onConflict: 'user_id,subtopic_id'})
+      }, { onConflict: 'user_id,subtopic_id' })
       .select()
       .maybeSingle()
-    if (sessionCreateError) console.error('createSession error:', sessionCreateError)
 
     setSessionId(newSession.id)
     setLoadingSession(false)
@@ -93,18 +86,8 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
   }
 
   async function saveMessage(sid, role, content) {
-    const { error: msgError } = await supabase.from('session_messages').insert({
-      session_id: sid,
-      role,
-      content,
-    })
-    if (msgError) console.error('saveMessage error:', msgError)
-
-    const { error: sessionError } = await supabase
-      .from('tutor_sessions')
-      .update({ updated_at: new Date().toISOString() })
-      .eq('id', sid)
-    if (sessionError) console.error('updateSession error:', sessionError)
+    await supabase.from('session_messages').insert({ session_id: sid, role, content })
+    await supabase.from('tutor_sessions').update({ updated_at: new Date().toISOString() }).eq('id', sid)
   }
 
   async function startSession(sid) {
@@ -114,14 +97,9 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
       const openingPrompt = `Start teaching me about: ${subtopic.title}. Remember my profile and begin with your diagnostic question.`
       const firstHistory = [{ role: 'user', parts: [{ text: openingPrompt }] }]
       const reply = await sendMessage(firstHistory, studentProfile)
-
       await saveMessage(sid, 'user', openingPrompt)
       await saveMessage(sid, 'model', reply)
-
-      setHistory([
-        ...firstHistory,
-        { role: 'model', parts: [{ text: reply }] }
-      ])
+      setHistory([...firstHistory, { role: 'model', parts: [{ text: reply }] }])
       setMessages([{ role: 'ai', text: reply }])
     } catch (e) {
       setError('Error: ' + e.message)
@@ -134,27 +112,20 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
     const userText = input.trim()
     setInput('')
     setError('')
-
     const newMessages = [...messages, { role: 'user', text: userText }]
     setMessages(newMessages)
-
     const newHistory = [...history, { role: 'user', parts: [{ text: userText }] }]
     setLoading(true)
-
     try {
       const reply = await sendMessage(newHistory, studentProfile)
       const updatedHistory = [...newHistory, { role: 'model', parts: [{ text: reply }] }]
       setHistory(updatedHistory)
       setMessages([...newMessages, { role: 'ai', text: reply }])
-
       if (sessionId) {
         await saveMessage(sessionId, 'user', userText)
         await saveMessage(sessionId, 'model', reply)
       }
-
-      if (reply.includes('You have completed this subtopic')) {
-        setQuizReady(true)
-      }
+      if (reply.includes('You have completed this subtopic')) setQuizReady(true)
     } catch (e) {
       setError('Something went wrong. Please try again.')
     }
@@ -170,58 +141,60 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
 
   if (loadingSession) {
     return (
-      <div className="h-screen bg-emerald-50 flex flex-col items-center justify-center gap-4">
+      <div className="h-screen app-bg flex flex-col items-center justify-center gap-4">
         <motion.div
           animate={{ scale: [1, 1.08, 1], opacity: [1, 0.75, 1] }}
           transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-          className="w-16 h-16 bg-white rounded-2xl border border-emerald-100 shadow-md flex items-center justify-center"
+          className="w-16 h-16 rounded-2xl shadow-md flex items-center justify-center"
+          style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
         >
-          <BrainCircuit size={28} strokeWidth={1.5} className="text-emerald-600" />
+          <BrainCircuit size={28} strokeWidth={1.5} style={{ color: 'var(--primary)' }} />
         </motion.div>
-        <div className="text-sm text-emerald-600 font-medium">Athena is getting ready...</div>
+        <div className="text-sm font-medium" style={{ color: 'var(--primary)' }}>Athena is getting ready...</div>
       </div>
     )
   }
 
   return (
-    <div className="h-screen bg-emerald-50 flex flex-col overflow-hidden">
+    <div className="h-screen app-bg flex flex-col overflow-hidden">
 
-      <div className="bg-white border-b border-emerald-100 px-6 py-4 flex items-center gap-4 sticky top-0 z-10">
-        <button onClick={onBack} className="text-sm text-gray-400 hover:text-emerald-600 transition-colors">
+      <div className="px-6 py-4 flex items-center gap-4 sticky top-0 z-10" style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+        <button onClick={onBack} className="text-sm app-muted transition-colors hover:opacity-80">
           ← Exit
         </button>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-bold text-emerald-900 truncate">{subtopic.title}</div>
-          <div className="text-xs text-gray-400">{subject.name}</div>
+          <div className="text-sm font-bold app-heading truncate">{subtopic.title}</div>
+          <div className="text-xs app-muted">{subject.name}</div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs text-emerald-600 font-medium">Athena active</span>
+          <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--primary)' }} />
+          <span className="text-xs font-medium" style={{ color: 'var(--primary)' }}>Athena active</span>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-6 max-w-3xl w-full mx-auto">
 
         <motion.div
-          className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-6 flex items-start gap-3"
+          className="rounded-2xl p-4 mb-6 flex items-start gap-3"
+          style={{ backgroundColor: 'var(--primary-soft)', border: '1px solid var(--border)' }}
           variants={fadeUp}
           initial="initial"
           animate="animate"
         >
-          <div className="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--primary)' }}>
             <svg viewBox="0 0 60 60" width="20" height="20" fill="none">
-              <path d="M30 8C26 5 19 5 16 10C12 7 7 9 6 15C2 17 1 24 5 29C1 33 1 41 6 44C6 51 12 55 18 53C20 58 26 60 30 57C34 60 40 58 42 53C48 55 54 51 54 44C59 41 59 33 55 29C59 24 58 17 54 15C53 9 48 7 44 10C41 5 34 5 30 8Z" stroke="#6ee7b7" strokeWidth="2.5" strokeLinejoin="round"/>
-              <line x1="30" y1="10" x2="30" y2="50" stroke="#6ee7b7" strokeWidth="1.2" strokeDasharray="3,2.5"/>
-              <circle cx="20" cy="21" r="2" fill="#6ee7b7"/>
-              <circle cx="40" cy="21" r="2" fill="#6ee7b7"/>
-              <circle cx="25" cy="28" r="1.8" fill="#6ee7b7"/>
-              <circle cx="35" cy="28" r="1.8" fill="#6ee7b7"/>
-              <circle cx="30" cy="40" r="1.8" fill="#6ee7b7"/>
+              <path d="M30 8C26 5 19 5 16 10C12 7 7 9 6 15C2 17 1 24 5 29C1 33 1 41 6 44C6 51 12 55 18 53C20 58 26 60 30 57C34 60 40 58 42 53C48 55 54 51 54 44C59 41 59 33 55 29C59 24 58 17 54 15C53 9 48 7 44 10C41 5 34 5 30 8Z" stroke="white" strokeWidth="2.5" strokeLinejoin="round"/>
+              <line x1="30" y1="10" x2="30" y2="50" stroke="white" strokeWidth="1.2" strokeDasharray="3,2.5"/>
+              <circle cx="20" cy="21" r="2" fill="white"/>
+              <circle cx="40" cy="21" r="2" fill="white"/>
+              <circle cx="25" cy="28" r="1.8" fill="white"/>
+              <circle cx="35" cy="28" r="1.8" fill="white"/>
+              <circle cx="30" cy="40" r="1.8" fill="white"/>
             </svg>
           </div>
           <div>
-            <div className="text-xs font-semibold text-emerald-700 mb-1">Athena — AI Tutor</div>
-            <div className="text-xs text-emerald-600">
+            <div className="text-xs font-semibold mb-1" style={{ color: 'var(--primary)' }}>Athena — AI Tutor</div>
+            <div className="text-xs app-muted">
               {messages.length > 1
                 ? `Welcome back! Continuing your session on ${subtopic.title}.`
                 : 'Your personal tutor, adapted to your learning style. Ask anything freely.'}
@@ -239,15 +212,17 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
               animate="animate"
             >
               {msg.role === 'ai' && (
-                <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0 mr-3 mt-1">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mr-3 mt-1" style={{ backgroundColor: 'var(--primary)' }}>
                   <BrainCircuit size={14} strokeWidth={2} className="text-white" />
                 </div>
               )}
-              <div className={`max-w-xl px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                msg.role === 'user'
-                  ? 'bg-emerald-600 text-white rounded-tr-sm'
-                  : 'bg-white border border-emerald-100 text-gray-700 rounded-tl-sm'
-              }`}>
+              <div
+                className={`max-w-xl px-4 py-3 rounded-2xl text-sm leading-relaxed ${msg.role === 'user' ? 'rounded-tr-sm' : 'rounded-tl-sm'}`}
+                style={msg.role === 'user'
+                  ? { backgroundColor: 'var(--primary)', color: 'white' }
+                  : { backgroundColor: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-body)' }
+                }
+              >
                 {msg.role === 'user' ? (
                   msg.text
                 ) : (
@@ -264,8 +239,8 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
                       h1: ({ children }) => <h1 className="font-bold text-base mb-1">{children}</h1>,
                       h2: ({ children }) => <h2 className="font-bold text-sm mb-1">{children}</h2>,
                       h3: ({ children }) => <h3 className="font-semibold text-sm mb-1">{children}</h3>,
-                      code: ({ children }) => <code className="bg-emerald-50 text-emerald-800 px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>,
-                      blockquote: ({ children }) => <blockquote className="border-l-2 border-emerald-300 pl-3 text-gray-500 italic my-2">{children}</blockquote>,
+                      code: ({ children }) => <code className="px-1.5 py-0.5 rounded text-xs font-mono" style={{ backgroundColor: 'var(--primary-soft)', color: 'var(--primary)' }}>{children}</code>,
+                      blockquote: ({ children }) => <blockquote className="pl-3 italic my-2" style={{ borderLeft: '2px solid var(--border)', color: 'var(--text-muted)' }}>{children}</blockquote>,
                     }}
                   >
                     {msg.text}
@@ -285,14 +260,14 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
               animate="animate"
               exit={{ opacity: 0, y: -8 }}
             >
-              <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0 mr-3 mt-1">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mr-3 mt-1" style={{ backgroundColor: 'var(--primary)' }}>
                 <BrainCircuit size={14} strokeWidth={2} className="text-white" />
               </div>
-              <div className="bg-white border border-emerald-100 px-4 py-3 rounded-2xl rounded-tl-sm">
+              <div className="px-4 py-3 rounded-2xl rounded-tl-sm" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
                 <div className="flex gap-1 items-center h-5">
-                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: 'var(--primary)', animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: 'var(--primary)', animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: 'var(--primary)', animationDelay: '300ms' }} />
                 </div>
               </div>
             </motion.div>
@@ -301,7 +276,7 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
 
         {error && (
           <motion.div
-            className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3 mb-4"
+            className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm rounded-xl px-4 py-3 mb-4"
             variants={fadeUp}
             initial="initial"
             animate="animate"
@@ -313,18 +288,20 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
         <AnimatePresence>
           {quizReady && (
             <motion.div
-              className="bg-emerald-50 border border-emerald-500 rounded-2xl p-5 mb-4 flex items-center justify-between gap-4"
+              className="rounded-2xl p-5 mb-4 flex items-center justify-between gap-4"
+              style={{ backgroundColor: 'var(--primary-soft)', border: '1px solid var(--primary)' }}
               initial={{ opacity: 0, y: 12, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             >
               <div>
-                <div className="text-sm font-bold text-emerald-800">Subtopic complete!</div>
-                <div className="text-xs text-emerald-600 mt-0.5">Ready to test what you have learned?</div>
+                <div className="text-sm font-bold app-heading">Subtopic complete!</div>
+                <div className="text-xs app-muted mt-0.5">Ready to test what you have learned?</div>
               </div>
               <motion.button
                 onClick={onComplete}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors flex-shrink-0"
+                className="text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors flex-shrink-0 text-white"
+                style={{ backgroundColor: 'var(--primary)' }}
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
               >
@@ -337,7 +314,7 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
         <div ref={bottomRef} />
       </div>
 
-      <div className="bg-white border-t border-emerald-100 px-4 py-4">
+      <div className="px-4 py-4" style={{ backgroundColor: 'var(--surface)', borderTop: '1px solid var(--border)' }}>
         <div className="max-w-3xl mx-auto flex gap-3 items-end">
           <textarea
             value={input}
@@ -345,12 +322,13 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
             onKeyDown={handleKeyDown}
             placeholder="Type your answer or question... (Enter to send)"
             rows={2}
-            className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all resize-none"
+            className="flex-1 rounded-xl px-4 py-3 text-sm outline-none transition-all resize-none app-input"
           />
           <motion.button
             onClick={handleSend}
             disabled={loading || !input.trim()}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-5 py-3 text-sm font-semibold disabled:opacity-40 transition-colors flex-shrink-0"
+            className="rounded-xl px-5 py-3 text-sm font-semibold disabled:opacity-40 transition-colors flex-shrink-0 text-white"
+            style={{ backgroundColor: 'var(--primary)' }}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
           >
