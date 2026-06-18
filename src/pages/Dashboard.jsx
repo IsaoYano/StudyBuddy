@@ -372,6 +372,7 @@ export default function Dashboard({ session }) {
         subject={selectedSubject}
         subtopic={selectedSubtopic}
         studentProfile={studentProfile}
+        session={session}
         onBack={() => setPage('onboarding')}
         onComplete={() => {
           setQuizSubject(selectedSubject)

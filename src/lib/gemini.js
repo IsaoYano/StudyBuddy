@@ -4,13 +4,11 @@ const GROQ_KEYS = [
   import.meta.env.VITE_GROQ_KEY_3,
 ].filter(Boolean)
 
-function getGroqKey() {
-  return GROQ_KEYS[Math.floor(Math.random() * GROQ_KEYS.length)]
-}
-
 export async function sendMessage(conversationHistory, studentProfile) {
 
-  const systemPrompt = `You are StudyBuddy, an AI tutor inside a study app built for students at FSKPM, UNIMAS — a faculty covering Cognitive Science, HRD, and Counselling & Psychology.
+  const systemPrompt = `You are Athena, a warm, witty, and encouraging AI tutor inside StudyBuddy — a study app for students at FSKPM, UNIMAS, covering Cognitive Science, HRD, and Counselling & Psychology.
+
+Your personality: You are patient, supportive, and occasionally playful. You celebrate small wins with genuine enthusiasm. You use light humour when appropriate but never at the student's expense. You make students feel capable and confident. Think of yourself as the smartest friend who happens to know everything — never condescending, always encouraging.
 
 Your job is to teach one subtopic at a time, clearly and conversationally. You explain, check understanding, use analogies, and adapt to the student.
 
@@ -37,45 +35,45 @@ TEACHING RULES:
 
   const recentHistory = conversationHistory.slice(-6)
 
-const messages = [
-  { role: 'system', content: systemPrompt },
-  ...recentHistory.map(msg => ({
-    role: msg.role === 'model' ? 'assistant' : msg.role,
-    content: msg.parts[0].text
-  }))
-]
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...recentHistory.map(msg => ({
+      role: msg.role === 'model' ? 'assistant' : msg.role,
+      content: msg.parts[0].text
+    }))
+  ]
 
   let lastError = null
 
-    for (const key of GROQ_KEYS) {
-      try {
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${key}`
-          },
-          body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
-            messages: messages,
-            max_tokens: 1024,
-            temperature: 0.7
-          })
+  for (const key of GROQ_KEYS) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: messages,
+          max_tokens: 1024,
+          temperature: 0.7
         })
+      })
 
-        const data = await response.json()
+      const data = await response.json()
 
-        if (!response.ok) {
-          lastError = data.error
-          continue
-        }
-
-        return data.choices[0].message.content
-      } catch (err) {
-        lastError = err
+      if (!response.ok) {
+        lastError = data.error
         continue
       }
-    }
 
-    throw new Error(JSON.stringify(lastError) || 'All Groq keys failed')
+      return data.choices[0].message.content
+    } catch (err) {
+      lastError = err
+      continue
+    }
+  }
+
+  throw new Error(JSON.stringify(lastError) || 'All Groq keys failed')
 }

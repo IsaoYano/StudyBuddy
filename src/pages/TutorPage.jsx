@@ -2,33 +2,119 @@ import ReactMarkdown from 'react-markdown'
 import { BrainCircuit } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { sendMessage } from '../lib/gemini'
+import { supabase } from '../lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
 import { chatMessage, fadeUp } from '../utils/animations'
 
-export default function TutorPage({ subject, subtopic, studentProfile, onBack, onComplete }) {
+export default function TutorPage({ subject, subtopic, studentProfile, session, onBack, onComplete }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [history, setHistory] = useState([])
   const [error, setError] = useState('')
   const [quizReady, setQuizReady] = useState(false)
+  const [sessionId, setSessionId] = useState(null)
+  const [loadingSession, setLoadingSession] = useState(true)
   const bottomRef = useRef(null)
 
   useEffect(() => {
-    startSession()
+    loadOrCreateSession()
   }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  async function startSession() {
+  async function loadOrCreateSession() {
+    console.log('SESSION USER ID:', session?.user?.id)
+    console.log('SUBTOPIC ID:', subtopic?.id)
+    console.log('SUBJECT ID:', subject?.id)
+    setLoadingSession(true)
+
+    const { data: existingSession } = await supabase
+      .from('tutor_sessions')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .eq('subtopic_id', subtopic.id)
+      .maybeSingle()
+
+    if (existingSession) {
+      const { data: previousMessages } = await supabase
+        .from('session_messages')
+        .select('*')
+        .eq('session_id', existingSession.id)
+        .order('created_at', { ascending: true })
+
+      if (previousMessages && previousMessages.length > 0) {
+        const visibleMessages = previousMessages.filter(
+          m => !m.content.startsWith('Start teaching me about:')
+        )
+
+        const loadedMessages = visibleMessages.map(m => ({
+          role: m.role === 'model' ? 'ai' : 'user',
+          text: m.content
+        }))
+
+        const loadedHistory = previousMessages.map(m => ({
+          role: m.role,
+          parts: [{ text: m.content }]
+        }))
+
+        setMessages(loadedMessages)
+        setHistory(loadedHistory)
+        setSessionId(existingSession.id)
+        setLoadingSession(false)
+        return
+      }
+
+      setSessionId(existingSession.id)
+      setLoadingSession(false)
+      startSession(existingSession.id)
+      return
+    }
+
+    const { data: newSession, error: sessionCreateError } = await supabase
+      .from('tutor_sessions')
+      .insert({
+        user_id: session.user.id,
+        subject_id: subject.id,
+        subtopic_id: subtopic.id,
+      }, {onConflict: 'user_id,subtopic_id'})
+      .select()
+      .maybeSingle()
+    if (sessionCreateError) console.error('createSession error:', sessionCreateError)
+
+    setSessionId(newSession.id)
+    setLoadingSession(false)
+    startSession(newSession.id)
+  }
+
+  async function saveMessage(sid, role, content) {
+    const { error: msgError } = await supabase.from('session_messages').insert({
+      session_id: sid,
+      role,
+      content,
+    })
+    if (msgError) console.error('saveMessage error:', msgError)
+
+    const { error: sessionError } = await supabase
+      .from('tutor_sessions')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', sid)
+    if (sessionError) console.error('updateSession error:', sessionError)
+  }
+
+  async function startSession(sid) {
     setLoading(true)
     setError('')
     try {
       const openingPrompt = `Start teaching me about: ${subtopic.title}. Remember my profile and begin with your diagnostic question.`
       const firstHistory = [{ role: 'user', parts: [{ text: openingPrompt }] }]
       const reply = await sendMessage(firstHistory, studentProfile)
+
+      await saveMessage(sid, 'user', openingPrompt)
+      await saveMessage(sid, 'model', reply)
+
       setHistory([
         ...firstHistory,
         { role: 'model', parts: [{ text: reply }] }
@@ -57,6 +143,12 @@ export default function TutorPage({ subject, subtopic, studentProfile, onBack, o
       const updatedHistory = [...newHistory, { role: 'model', parts: [{ text: reply }] }]
       setHistory(updatedHistory)
       setMessages([...newMessages, { role: 'ai', text: reply }])
+
+      if (sessionId) {
+        await saveMessage(sessionId, 'user', userText)
+        await saveMessage(sessionId, 'model', reply)
+      }
+
       if (reply.includes('You have completed this subtopic')) {
         setQuizReady(true)
       }
@@ -73,10 +165,25 @@ export default function TutorPage({ subject, subtopic, studentProfile, onBack, o
     }
   }
 
+  if (loadingSession) {
+    return (
+      <div className="h-screen bg-emerald-50 flex flex-col items-center justify-center gap-4">
+        <motion.div
+          animate={{ scale: [1, 1.08, 1], opacity: [1, 0.75, 1] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+          className="w-16 h-16 bg-white rounded-2xl border border-emerald-100 shadow-md flex items-center justify-center"
+        >
+          <BrainCircuit size={28} strokeWidth={1.5} className="text-emerald-600" />
+        </motion.div>
+        <div className="text-sm text-emerald-600 font-medium">Athena is getting ready...</div>
+      </div>
+    )
+  }
+
   return (
     <div className="h-screen bg-emerald-50 flex flex-col overflow-hidden">
 
-      <div className="bg-white border-b border-emerald-100 px-6 py-4 flex items-center gap-4">
+      <div className="bg-white border-b border-emerald-100 px-6 py-4 flex items-center gap-4 sticky top-0 z-10">
         <button onClick={onBack} className="text-sm text-gray-400 hover:text-emerald-600 transition-colors">
           ← Exit
         </button>
@@ -112,7 +219,9 @@ export default function TutorPage({ subject, subtopic, studentProfile, onBack, o
           <div>
             <div className="text-xs font-semibold text-emerald-700 mb-1">Athena — AI Tutor</div>
             <div className="text-xs text-emerald-600">
-              Your personal tutor, adapted to your learning style. Ask anything freely.
+              {messages.length > 1
+                ? `Welcome back! Continuing your session on ${subtopic.title}.`
+                : 'Your personal tutor, adapted to your learning style. Ask anything freely.'}
             </div>
           </div>
         </motion.div>
@@ -135,29 +244,29 @@ export default function TutorPage({ subject, subtopic, studentProfile, onBack, o
                 msg.role === 'user'
                   ? 'bg-emerald-600 text-white rounded-tr-sm'
                   : 'bg-white border border-emerald-100 text-gray-700 rounded-tl-sm'
-                }`}>
-                  {msg.role === 'user' ? (
-                    msg.text
-                  ) : (
-                    <ReactMarkdown
-                      components={{
-                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                        strong: ({ children }) => <strong className="font-bold">{children}</strong>,
-                        em: ({ children }) => <em className="italic">{children}</em>,
-                        ul: ({ children }) => <ul className="list-disc pl-4 mb-2 flex flex-col gap-1">{children}</ul>,
-                        ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 flex flex-col gap-1">{children}</ol>,
-                        li: ({ children }) => <li className="text-sm">{children}</li>,
-                        h1: ({ children }) => <h1 className="font-bold text-base mb-1">{children}</h1>,
-                        h2: ({ children }) => <h2 className="font-bold text-sm mb-1">{children}</h2>,
-                        h3: ({ children }) => <h3 className="font-semibold text-sm mb-1">{children}</h3>,
-                        code: ({ children }) => <code className="bg-emerald-50 text-emerald-800 px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>,
-                        blockquote: ({ children }) => <blockquote className="border-l-2 border-emerald-300 pl-3 text-gray-500 italic my-2">{children}</blockquote>,
-                      }}
-                    >
-                      {msg.text}
-                    </ReactMarkdown>
-                  )}
-                </div>
+              }`}>
+                {msg.role === 'user' ? (
+                  msg.text
+                ) : (
+                  <ReactMarkdown
+                    components={{
+                      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                      strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+                      em: ({ children }) => <em className="italic">{children}</em>,
+                      ul: ({ children }) => <ul className="list-disc pl-4 mb-2 flex flex-col gap-1">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 flex flex-col gap-1">{children}</ol>,
+                      li: ({ children }) => <li className="text-sm">{children}</li>,
+                      h1: ({ children }) => <h1 className="font-bold text-base mb-1">{children}</h1>,
+                      h2: ({ children }) => <h2 className="font-bold text-sm mb-1">{children}</h2>,
+                      h3: ({ children }) => <h3 className="font-semibold text-sm mb-1">{children}</h3>,
+                      code: ({ children }) => <code className="bg-emerald-50 text-emerald-800 px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>,
+                      blockquote: ({ children }) => <blockquote className="border-l-2 border-emerald-300 pl-3 text-gray-500 italic my-2">{children}</blockquote>,
+                    }}
+                  >
+                    {msg.text}
+                  </ReactMarkdown>
+                )}
+              </div>
             </motion.div>
           ))}
         </AnimatePresence>
@@ -174,7 +283,7 @@ export default function TutorPage({ subject, subtopic, studentProfile, onBack, o
               <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0 mr-3 mt-1">
                 <BrainCircuit size={14} strokeWidth={2} className="text-white" />
               </div>
-              <div className="bg-white border-b border-emerald-100 px-6 py-4 flex items-center gap-4 sticky top-0 z-10">
+              <div className="bg-white border border-emerald-100 px-4 py-3 rounded-2xl rounded-tl-sm">
                 <div className="flex gap-1 items-center h-5">
                   <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                   <div className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
