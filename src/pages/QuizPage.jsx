@@ -9,19 +9,19 @@ const QUIZ_TYPES = [
   {
     value: 'mcq',
     label: 'Multiple Choice',
-    desc: '5 questions with 4 options each',
+    desc: '10–20 questions depending on difficulty',
     icon: <ListChecks size={22} strokeWidth={2} className="text-emerald-600" />,
   },
   {
     value: 'structured',
     label: 'Structured',
-    desc: '3 questions requiring written answers',
+    desc: '3–7 questions requiring written answers',
     icon: <PencilLine size={22} strokeWidth={2} className="text-blue-500" />,
   },
   {
     value: 'essay',
     label: 'Essay',
-    desc: '1 deep question requiring a detailed response',
+    desc: '1–3 deep questions requiring detailed responses',
     icon: <FileText size={22} strokeWidth={2} className="text-amber-500" />,
   },
 ]
