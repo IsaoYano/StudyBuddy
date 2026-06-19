@@ -1,3 +1,4 @@
+import WalkthroughGuide, { WalkthroughButton } from '../components/WalkthroughGuide'
 import NotesPage from './NotesPage'
 import FlashcardPage from './FlashcardPage'
 import LoadingScreen from '../components/LoadingScreen'
@@ -142,13 +143,14 @@ function Sidebar({ page, setPage, profile, session, handleLogout }) {
 
       <nav className="flex-1 p-3 flex flex-col gap-1">
         {[
-          { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} strokeWidth={2} /> },
-          { id: 'subjects', label: 'My subjects', icon: <BookOpen size={18} strokeWidth={2} /> },
-          { id: 'notes', label: 'My notes', icon: <FileText size={18} strokeWidth={2} /> },
-          { id: 'history', label: 'History', icon: <History size={18} strokeWidth={2} /> },
+          { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} strokeWidth={2} />, domId: 'nav-dashboard' },
+          { id: 'subjects', label: 'My subjects', icon: <BookOpen size={18} strokeWidth={2} />, domId: 'nav-subjects' },
+          { id: 'notes', label: 'My notes', icon: <FileText size={18} strokeWidth={2} />, domId: 'nav-notes' },
+          { id: 'history', label: 'History', icon: <History size={18} strokeWidth={2} />, domId: 'nav-history' },
         ].map(item => (
           <button
             key={item.id}
+            id={item.domId}
             onClick={() => setPage(item.id)}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left ${
               page === item.id ? 'app-nav-active' : 'app-nav-inactive hover:opacity-80'
@@ -212,6 +214,9 @@ export default function Dashboard({ session, darkMode, setDarkMode }) {
   const [retrySubtopic, setRetrySubtopic] = useState(null)
   const [streak, setStreak] = useState(0)
   const [flashcardSubject, setFlashcardSubject] = useState(null)
+  const [showWalkthrough, setShowWalkthrough] = useState(() => {
+    return localStorage.getItem('hasSeenWalkthrough') !== 'true'
+  })
   const [flashcardSubtopic, setFlashcardSubtopic] = useState(null)
 
   useEffect(() => { fetchData() }, [])
@@ -366,9 +371,21 @@ export default function Dashboard({ session, darkMode, setDarkMode }) {
         )}
       </AnimatePresence>
 
+       <AnimatePresence>
+        {showWalkthrough && (
+          <WalkthroughGuide
+            onClose={() => setShowWalkthrough(false)}
+            onNavigate={(p) => setPage(p)}
+          />
+        )}
+      </AnimatePresence>
+
       <Sidebar page={page} setPage={setPage} profile={profile} session={session} handleLogout={handleLogout} />
 
       <div className="ml-56 flex-1 p-8 app-bg">
+        <div className="flex justify-end mb-4">
+          <WalkthroughButton onClick={() => setShowWalkthrough(true)} />
+        </div>
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <LoadingScreen />
@@ -449,7 +466,12 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, onAd
             sub: streak > 0 ? `${streak} day${streak > 1 ? 's' : ''} in a row` : 'Complete a quiz to start',
           },
         ].map(stat => (
-          <motion.div key={stat.label} className="app-card rounded-2xl p-5" variants={cardItem}>
+          <motion.div
+            key={stat.label}
+            id={stat.label === 'Study streak' ? 'streak-card' : undefined}
+            className="app-card rounded-2xl p-5"
+            variants={cardItem}
+          >
             <div className="text-xs font-medium uppercase tracking-wide mb-2 app-muted">{stat.label}</div>
             <div className="text-3xl font-bold app-heading">{stat.value}</div>
             <div className="text-xs mt-1" style={{ color: 'var(--primary)' }}>{stat.sub}</div>
