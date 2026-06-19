@@ -1,10 +1,10 @@
+import { sendMessage, generateSessionSummary, generateNotes } from '../lib/gemini'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
 import ReactMarkdown from 'react-markdown'
 import { BrainCircuit } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
-import { sendMessage } from '../lib/gemini'
 import { supabase } from '../lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
 import { chatMessage, fadeUp } from '../utils/animations'
@@ -17,8 +17,12 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
   const [error, setError] = useState('')
   const [quizReady, setQuizReady] = useState(false)
   const [sessionId, setSessionId] = useState(null)
+  const [sessionSummary, setSessionSummary] = useState('')
+  const [summaryLoading, setSummaryLoading] = useState(false)
   const [loadingSession, setLoadingSession] = useState(true)
   const bottomRef = useRef(null)
+  const [generatingNotes, setGeneratingNotes] = useState(false)
+  const [notesSaved, setNotesSaved] = useState(false)
 
   useEffect(() => {
     loadOrCreateSession()
@@ -125,7 +129,21 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
         await saveMessage(sessionId, 'user', userText)
         await saveMessage(sessionId, 'model', reply)
       }
-      if (reply.includes('You have completed this subtopic')) setQuizReady(true)
+      if (reply.includes('You have completed this subtopic')) {
+        setQuizReady(true)
+        setSummaryLoading(true)
+        try {
+          const summary = await generateSessionSummary(
+            subtopic.title,
+            subject.name,
+            [...newHistory, { role: 'model', parts: [{ text: reply }] }]
+          )
+          setSessionSummary(summary)
+        } catch (e) {
+          console.error('Summary generation failed:', e)
+        }
+        setSummaryLoading(false)
+      }
     } catch (e) {
       setError('Something went wrong. Please try again.')
     }
@@ -288,25 +306,95 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
         <AnimatePresence>
           {quizReady && (
             <motion.div
-              className="rounded-2xl p-5 mb-4 flex items-center justify-between gap-4"
-              style={{ backgroundColor: 'var(--primary-soft)', border: '1px solid var(--primary)' }}
-              initial={{ opacity: 0, y: 12, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
+              className="mb-4 flex flex-col gap-3"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             >
-              <div>
-                <div className="text-sm font-bold app-heading">Subtopic complete!</div>
-                <div className="text-xs app-muted mt-0.5">Ready to test what you have learned?</div>
-              </div>
-              <motion.button
-                onClick={onComplete}
-                className="text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors flex-shrink-0 text-white"
-                style={{ backgroundColor: 'var(--primary)' }}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
+              {summaryLoading && (
+                <div className="rounded-2xl p-4 flex items-center gap-3" style={{ backgroundColor: 'var(--surface-soft)', border: '1px solid var(--border)' }}>
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: 'var(--primary)', animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: 'var(--primary)', animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: 'var(--primary)', animationDelay: '300ms' }} />
+                  </div>
+                  <span className="text-xs app-muted">Athena is preparing your session summary...</span>
+                </div>
+              )}
+
+              {sessionSummary && !summaryLoading && (
+                <motion.div
+                  className="rounded-2xl p-5"
+                  style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--primary)' }}>
+                    📋 Session Summary
+                  </div>
+                  <div className="text-xs leading-relaxed app-muted whitespace-pre-line mb-4">
+                    {sessionSummary}
+                  </div>
+                  {!notesSaved ? (
+                    <motion.button
+                      onClick={async () => {
+                        setGeneratingNotes(true)
+                        try {
+                          const notesContent = await generateNotes(
+                            subtopic.title,
+                            subject.name,
+                            history,
+                            studentProfile
+                          )
+                          const { supabase: sb } = await import('../lib/supabase')
+                          await sb.from('notes').insert({
+                            user_id: session.user.id,
+                            subject_id: subject.id,
+                            subtopic_id: subtopic.id,
+                            title: subtopic.title,
+                            content: notesContent,
+                          })
+                          setNotesSaved(true)
+                        } catch (e) {
+                          console.error('Notes generation failed:', e)
+                        }
+                        setGeneratingNotes(false)
+                      }}
+                      disabled={generatingNotes}
+                      className="text-xs font-semibold px-4 py-2 rounded-xl transition-colors text-white disabled:opacity-50"
+                      style={{ backgroundColor: 'var(--primary)' }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {generatingNotes ? 'Generating notes...' : '📝 Generate study notes'}
+                    </motion.button>
+                  ) : (
+                    <div className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>
+                      ✓ Notes saved — view them in My Notes
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              <div
+                className="rounded-2xl p-5 flex items-center justify-between gap-4"
+                style={{ backgroundColor: 'var(--primary-soft)', border: '1px solid var(--primary)' }}
               >
-                Take quiz
-              </motion.button>
+                <div>
+                  <div className="text-sm font-bold app-heading">Subtopic complete!</div>
+                  <div className="text-xs app-muted mt-0.5">Ready to test what you have learned?</div>
+                </div>
+                <motion.button
+                  onClick={onComplete}
+                  className="text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors flex-shrink-0 text-white"
+                  style={{ backgroundColor: 'var(--primary)' }}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  Take quiz
+                </motion.button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

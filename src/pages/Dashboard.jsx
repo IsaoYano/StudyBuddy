@@ -1,3 +1,4 @@
+import NotesPage from './NotesPage'
 import FlashcardPage from './FlashcardPage'
 import LoadingScreen from '../components/LoadingScreen'
 import { useState, useEffect } from 'react'
@@ -24,6 +25,7 @@ import {
   Handshake,
   Microscope,
   BookMarked,
+  FileText,
 } from 'lucide-react'
 
 function daysUntil(dateStr) {
@@ -142,6 +144,7 @@ function Sidebar({ page, setPage, profile, session, handleLogout }) {
         {[
           { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} strokeWidth={2} /> },
           { id: 'subjects', label: 'My subjects', icon: <BookOpen size={18} strokeWidth={2} /> },
+          { id: 'notes', label: 'My notes', icon: <FileText size={18} strokeWidth={2} /> },
           { id: 'history', label: 'History', icon: <History size={18} strokeWidth={2} /> },
         ].map(item => (
           <button
@@ -374,6 +377,8 @@ export default function Dashboard({ session, darkMode, setDarkMode }) {
           <DashboardHome subjects={subjects} subtopics={subtopics} getProgress={getProgress} profile={profile} streak={streak} onAddSubject={() => setPage('add')} onStudy={handleStudy} />
         ) : page === 'subjects' ? (
           <SubjectsPage subjects={subjects} subtopics={subtopics} getProgress={getProgress} toggleSubtopic={toggleSubtopic} onAddSubject={() => setPage('add')} onStudy={handleStudy} onDirectQuiz={handleDirectQuiz} onFlashcard={handleFlashcard} onEdit={handleEditSubject} onDelete={handleDeleteSubject} />
+        ) : page === 'notes' ? (
+          <NotesPage session={session} />
         ) : page === 'history' ? (
           <HistoryPage session={session} onRetryQuiz={handleRetryQuiz} />
         ) : page === 'settings' ? (

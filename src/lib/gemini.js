@@ -48,25 +48,11 @@ TEACHING RULES:
     try {
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${key}`
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: messages,
-          max_tokens: 1024,
-          temperature: 0.7
-        })
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: 1024, temperature: 0.7 })
       })
-
       const data = await response.json()
-
-      if (!response.ok) {
-        lastError = data.error
-        continue
-      }
-
+      if (!response.ok) { lastError = data.error; continue }
       return data.choices[0].message.content
     } catch (err) {
       lastError = err
@@ -107,16 +93,138 @@ BACK: [answer]
     try {
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${key}`
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages,
-          max_tokens: 1024,
-          temperature: 0.5
-        })
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: 1024, temperature: 0.5 })
+      })
+      const data = await response.json()
+      if (!response.ok) { lastError = data.error; continue }
+      return data.choices[0].message.content
+    } catch (err) {
+      lastError = err
+      continue
+    }
+  }
+
+  throw new Error(JSON.stringify(lastError) || 'All Groq keys failed')
+}
+
+export async function generateSessionSummary(subtopicTitle, subjectName, conversationHistory) {
+  const systemPrompt = `You are Athena. A student just completed a tutor session on "${subtopicTitle}" (${subjectName}).
+
+Based on the conversation, generate a concise structured summary the student can use for revision.
+
+Format exactly like this:
+SUMMARY: [1-2 sentence overview of what was covered]
+KEY CONCEPTS:
+- [concept 1]
+- [concept 2]
+- [concept 3]
+KEY TERMS:
+- [term]: [brief definition]
+- [term]: [brief definition]
+REMEMBER:
+- [most important takeaway]
+- [second takeaway]
+
+Keep it concise. Max 3 bullets per section.`
+
+  const recentHistory = conversationHistory.slice(-8).map(msg => ({
+    role: msg.role === 'model' ? 'assistant' : msg.role,
+    content: msg.parts[0].text
+  }))
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...recentHistory,
+    { role: 'user', content: 'Generate the session summary now.' }
+  ]
+
+  let lastError = null
+
+  for (const key of GROQ_KEYS) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: 512, temperature: 0.3 })
+      })
+      const data = await response.json()
+      if (!response.ok) { lastError = data.error; continue }
+      return data.choices[0].message.content
+    } catch (err) {
+      lastError = err
+      continue
+    }
+  }
+
+  throw new Error(JSON.stringify(lastError) || 'All Groq keys failed')
+}
+
+export async function generateNotes(subtopicTitle, subjectName, conversationHistory, studentProfile) {
+  const systemPrompt = `You are Athena. Generate clear, structured study notes for a student at FSKPM, UNIMAS.
+
+Subtopic: ${subtopicTitle}
+Subject: ${subjectName}
+Student language preference: ${studentProfile?.language || 'English'}
+Student depth preference: ${studentProfile?.depth || 'conceptual'}
+
+Based on the tutor session conversation, generate comprehensive notes the student can use for revision.
+
+Format exactly like this:
+
+# ${subtopicTitle}
+
+## Overview
+[2-3 sentence summary of the subtopic]
+
+## Key Concepts
+### [Concept 1 name]
+[Clear explanation with examples]
+
+### [Concept 2 name]
+[Clear explanation with examples]
+
+### [Concept 3 name]
+[Clear explanation with examples]
+
+## Key Terms
+| Term | Definition |
+|------|-----------|
+| [term] | [definition] |
+| [term] | [definition] |
+| [term] | [definition] |
+
+## Important Points to Remember
+- [Point 1]
+- [Point 2]
+- [Point 3]
+
+## Quick Revision Questions
+1. [Question 1]
+2. [Question 2]
+3. [Question 3]
+
+Write in ${studentProfile?.language || 'English'}. Be clear, concise and student-friendly.`
+
+  const recentHistory = conversationHistory.slice(-10).map(msg => ({
+    role: msg.role === 'model' ? 'assistant' : msg.role,
+    content: msg.parts[0].text
+  }))
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...recentHistory,
+    { role: 'user', content: 'Generate my study notes now.' }
+  ]
+
+  let lastError = null
+
+  for (const key of GROQ_KEYS) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: 2048, temperature: 0.4 })
       })
       const data = await response.json()
       if (!response.ok) { lastError = data.error; continue }
