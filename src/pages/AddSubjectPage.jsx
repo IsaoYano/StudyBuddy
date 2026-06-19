@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { extractSubtopicsFromText, readPDFText } from '../lib/slideReader'
-import { Brain, Laptop, BookOpenText, Handshake, Microscope } from 'lucide-react'
+import { extractSubtopicsFromText, readPDFText, readDOCXText, readPPTXText, readImageText } from '../lib/slideReader'
+import { Brain, Laptop, BookOpenText, Handshake, Microscope, Upload } from 'lucide-react'
 
 const SUBJECT_TYPES = [
   { value: 'neuroscience', label: 'Neuroscience / Biological', icon: <Brain size={20} strokeWidth={2} className="text-violet-500" /> },
@@ -10,6 +10,9 @@ const SUBJECT_TYPES = [
   { value: 'social', label: 'Social / Applied', icon: <Handshake size={20} strokeWidth={2} className="text-pink-500" /> },
   { value: 'research', label: 'Research Methods', icon: <Microscope size={20} strokeWidth={2} className="text-teal-500" /> },
 ]
+
+const ACCEPTED_FORMATS = '.pdf,.pptx,.docx,.jpg,.jpeg,.png'
+const FORMAT_LABELS = 'PDF, PPTX, DOCX, JPG, PNG'
 
 export default function AddSubjectPage({ session, onBack, onSaved }) {
   const [name, setName] = useState('')
@@ -20,6 +23,7 @@ export default function AddSubjectPage({ session, onBack, onSaved }) {
   const [error, setError] = useState('')
   const [uploadLoading, setUploadLoading] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState(false)
+  const [uploadedFiles, setUploadedFiles] = useState([])
   const fileRef = useRef(null)
 
   function addSubtopicField() { setSubtopics([...subtopics, '']) }
@@ -33,36 +37,68 @@ export default function AddSubjectPage({ session, onBack, onSaved }) {
     setSubtopics(subtopics.filter((_, i) => i !== index))
   }
 
+  function getFileType(file) {
+    const name = file.name.toLowerCase()
+    if (name.endsWith('.pdf')) return 'pdf'
+    if (name.endsWith('.pptx')) return 'pptx'
+    if (name.endsWith('.docx')) return 'docx'
+    if (name.endsWith('.jpg') || name.endsWith('.jpeg')) return 'jpg'
+    if (name.endsWith('.png')) return 'png'
+    return null
+  }
+
   async function handleFileUpload(e) {
-    const file = e.target.files[0]
-    if (!file) return
-    if (!name) { setError('Please enter a subject name first.'); return }
+    const files = Array.from(e.target.files)
+    if (!files.length) return
+    if (!name) {
+      setError('Please enter a subject name first.')
+      return
+    }
     setUploadLoading(true)
     setError('')
     setUploadSuccess(false)
-    try {
-      let text = ''
-      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-        text = await readPDFText(file)
-      } else {
-        setError('Please upload a PDF file.')
+
+    const GROQ_KEYS = [
+      import.meta.env.VITE_GROQ_KEY,
+      import.meta.env.VITE_GROQ_KEY_2,
+      import.meta.env.VITE_GROQ_KEY_3,
+    ].filter(Boolean)
+
+    let combinedText = ''
+
+    for (const file of files) {
+      const type = getFileType(file)
+      if (!type) {
+        setError(`Unsupported file: ${file.name}. Use ${FORMAT_LABELS}.`)
         setUploadLoading(false)
         return
       }
-      if (!text || text.trim().length < 50) {
-        setError('Could not read enough text from this PDF. Try a PDF with selectable text.')
-        setUploadLoading(false)
-        return
+
+      try {
+        let text = ''
+        if (type === 'pdf') text = await readPDFText(file)
+        else if (type === 'docx') text = await readDOCXText(file)
+        else if (type === 'pptx') text = await readPPTXText(file)
+        else if (type === 'jpg' || type === 'png') text = await readImageText(file, GROQ_KEYS)
+        combinedText += text + '\n'
+      } catch (err) {
+        console.error(`Failed to read ${file.name}:`, err)
       }
-      const extracted = await extractSubtopicsFromText(text, name)
-      if (extracted.length > 0) {
-        setSubtopics(extracted)
-        setUploadSuccess(true)
-      } else {
-        setError('Could not extract subtopics. You can still add them manually below.')
-      }
-    } catch (err) {
-      setError('File reading failed. Please try again or add subtopics manually.')
+    }
+
+    if (!combinedText.trim() || combinedText.trim().length < 50) {
+      setError('Could not read enough text from the uploaded files. Try a different format.')
+      setUploadLoading(false)
+      return
+    }
+
+    const extracted = await extractSubtopicsFromText(combinedText, name)
+    if (extracted.length > 0) {
+      setSubtopics(extracted)
+      setUploadedFiles(files.map(f => f.name))
+      setUploadSuccess(true)
+    } else {
+      setError('Could not extract subtopics. Add them manually below.')
     }
     setUploadLoading(false)
   }
@@ -178,20 +214,29 @@ export default function AddSubjectPage({ session, onBack, onSaved }) {
               </button>
             </div>
 
-            <div className="rounded-xl px-4 py-3 mb-4" style={{ backgroundColor: 'var(--primary-soft)', border: '1px solid var(--border)' }}>
+            {/* Upload section */}
+            <div className="rounded-xl px-4 py-4 mb-4" style={{ backgroundColor: 'var(--primary-soft)', border: '1px solid var(--border)' }}>
               <div className="text-xs font-semibold mb-1" style={{ color: 'var(--primary)' }}>
-                Upload lecture slides to auto-extract subtopics
+                Upload lecture files to auto-extract subtopics
               </div>
               <div className="text-xs app-muted mb-3">
-                Upload a PDF of your lecture slides and the AI will suggest subtopics automatically.
-                Make sure you enter the subject name first.
+                Supports {FORMAT_LABELS}. You can upload multiple files at once. Enter subject name first.
               </div>
-              <input ref={fileRef} type="file" accept=".pdf" onChange={handleFileUpload} className="hidden" />
+
+              <input
+                ref={fileRef}
+                type="file"
+                accept={ACCEPTED_FORMATS}
+                multiple
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 disabled={uploadLoading}
-                className="text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="flex items-center gap-2 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
                 style={{ backgroundColor: 'var(--primary)' }}
               >
                 {uploadLoading ? (
@@ -200,14 +245,31 @@ export default function AddSubjectPage({ session, onBack, onSaved }) {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                     </svg>
-                    Extracting subtopics...
+                    Reading files...
                   </>
-                ) : 'Upload PDF slides'}
+                ) : (
+                  <>
+                    <Upload size={12} />
+                    Upload files
+                  </>
+                )}
               </button>
-              {uploadLoading && <p className="text-xs app-muted mt-2">StudyBuddy is reading your lecture slides. This may take a moment.</p>}
-              {uploadSuccess && <p className="text-xs font-medium mt-2" style={{ color: 'var(--primary)' }}>✓ Subtopics extracted successfully. Edit them below if needed.</p>}
+
+              {uploadLoading && (
+                <p className="text-xs app-muted mt-2">Athena is reading your files. This may take a moment.</p>
+              )}
+
+              {uploadSuccess && (
+                <div className="mt-2">
+                  <p className="text-xs font-medium" style={{ color: 'var(--primary)' }}>
+                    ✓ Subtopics extracted from {uploadedFiles.join(', ')}
+                  </p>
+                  <p className="text-xs app-muted mt-0.5">Edit them below if needed.</p>
+                </div>
+              )}
             </div>
 
+            {/* Subtopic fields */}
             <div className="flex flex-col gap-2">
               {subtopics.map((subtopic, index) => (
                 <div key={index} className="flex gap-2 items-center">
