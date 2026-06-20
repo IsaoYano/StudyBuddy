@@ -1,7 +1,7 @@
-import { useState } from 'react'
-import { generateQuiz, evaluateAnswer } from '../lib/quiz'
+import { useState, useEffect } from 'react'
+import { generateQuiz, evaluateAnswer, QUESTION_COUNT_LIMITS } from '../lib/quiz'
 import { supabase } from '../lib/supabase'
-import { ListChecks, PencilLine, FileText } from 'lucide-react'
+import { ListChecks, PencilLine, FileText, Minus, Plus } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { fadeUp, cardItem, staggerContainer, quizReveal } from '../utils/animations'
 
@@ -9,19 +9,19 @@ const QUIZ_TYPES = [
   {
     value: 'mcq',
     label: 'Multiple Choice',
-    desc: '10–20 questions depending on difficulty',
+    desc: `${QUESTION_COUNT_LIMITS.mcq.min}–${QUESTION_COUNT_LIMITS.mcq.max} questions, you choose how many`,
     icon: <ListChecks size={22} strokeWidth={2} className="text-emerald-600" />,
   },
   {
     value: 'structured',
     label: 'Structured',
-    desc: '3–7 questions requiring written answers',
+    desc: `${QUESTION_COUNT_LIMITS.structured.min}–${QUESTION_COUNT_LIMITS.structured.max} questions requiring written answers`,
     icon: <PencilLine size={22} strokeWidth={2} className="text-blue-500" />,
   },
   {
     value: 'essay',
     label: 'Essay',
-    desc: '1–3 deep questions requiring detailed responses',
+    desc: `${QUESTION_COUNT_LIMITS.essay.min}–${QUESTION_COUNT_LIMITS.essay.max} deep questions requiring detailed responses`,
     icon: <FileText size={22} strokeWidth={2} className="text-amber-500" />,
   },
 ]
@@ -30,6 +30,7 @@ export default function QuizPage({ subject, subtopic, session, onBack, onComplet
   const [step, setStep] = useState('setup')
   const [quizType, setQuizType] = useState('')
   const [difficulty, setDifficulty] = useState('')
+  const [numQuestions, setNumQuestions] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [parsedQuestions, setParsedQuestions] = useState([])
@@ -37,6 +38,16 @@ export default function QuizPage({ subject, subtopic, session, onBack, onComplet
   const [submitted, setSubmitted] = useState(false)
   const [evaluations, setEvaluations] = useState({})
   const [evaluating, setEvaluating] = useState(false)
+
+  useEffect(() => {
+    if (quizType) setNumQuestions(QUESTION_COUNT_LIMITS[quizType].min)
+  }, [quizType])
+
+  function adjustNumQuestions(delta) {
+    if (!quizType) return
+    const { min, max } = QUESTION_COUNT_LIMITS[quizType]
+    setNumQuestions(prev => Math.min(max, Math.max(min, (prev ?? min) + delta)))
+  }
 
   async function startQuiz() {
     if (!quizType || !difficulty) {
@@ -46,7 +57,7 @@ export default function QuizPage({ subject, subtopic, session, onBack, onComplet
     setLoading(true)
     setError('')
     try {
-      const raw = await generateQuiz(subtopic.title, subject.name, quizType, difficulty, [], studentLanguage)
+      const raw = await generateQuiz(subtopic.title, subject.name, quizType, difficulty, [], studentLanguage, numQuestions)
       const parsed = parseQuiz(raw, quizType)
       setParsedQuestions(parsed)
       setStep('quiz')
@@ -277,6 +288,38 @@ export default function QuizPage({ subject, subtopic, session, onBack, onComplet
                 <p className="text-xs app-muted mt-3 text-center">Choose a question type and difficulty to start.</p>
               )}
             </div>
+
+            {quizType && (
+              <div className="mb-6">
+                <div className="text-xs font-semibold app-muted uppercase tracking-wide mb-3">Number of questions</div>
+                <div className="flex items-center justify-center gap-4">
+                  <motion.button
+                    onClick={() => adjustNumQuestions(-1)}
+                    disabled={numQuestions <= QUESTION_COUNT_LIMITS[quizType].min}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center disabled:opacity-30"
+                    style={{ border: '1px solid var(--border)', backgroundColor: 'var(--surface-soft)' }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Minus size={16} />
+                  </motion.button>
+                  <div className="text-2xl font-bold app-heading w-12 text-center">{numQuestions}</div>
+                  <motion.button
+                    onClick={() => adjustNumQuestions(1)}
+                    disabled={numQuestions >= QUESTION_COUNT_LIMITS[quizType].max}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center disabled:opacity-30"
+                    style={{ border: '1px solid var(--border)', backgroundColor: 'var(--surface-soft)' }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Plus size={16} />
+                  </motion.button>
+                </div>
+                <p className="text-xs app-muted mt-2 text-center">
+                  {QUESTION_COUNT_LIMITS[quizType].min}–{QUESTION_COUNT_LIMITS[quizType].max} questions allowed
+                </p>
+              </div>
+            )}
 
             <motion.button
               onClick={startQuiz}

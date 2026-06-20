@@ -38,15 +38,16 @@ async function groqFetch(systemPrompt, userMessage, maxTokens = 2048) {
   throw new Error(JSON.stringify(lastError) || 'All Groq keys failed')
 }
 
-export async function generateQuiz(subtopicTitle, subjectName, quizType, difficulty, conversationHistory, language = 'English') {
+export const QUESTION_COUNT_LIMITS = {
+  mcq: { min: 5, max: 20 },
+  structured: { min: 5, max: 10 },
+  essay: { min: 5, max: 8 },
+}
 
-  const questionCount = {
-    mcq: { beginner: 10, intermediate: 15, advanced: 20 },
-    structured: { beginner: 3, intermediate: 5, advanced: 7 },
-    essay: { beginner: 1, intermediate: 2, advanced: 3 },
-  }
+export async function generateQuiz(subtopicTitle, subjectName, quizType, difficulty, conversationHistory, language = 'English', questionCount) {
 
-  const count = questionCount[quizType][difficulty]
+  const { min, max } = QUESTION_COUNT_LIMITS[quizType]
+  const count = Math.min(max, Math.max(min, Number(questionCount) || min))
 
   const typeInstructions = {
     mcq: `Generate ${count} multiple choice questions. For each question provide:
@@ -98,8 +99,10 @@ Key Points:
     : 'Generate everything in English.'
 
   const systemPrompt = `You are an exam question generator for university students at FSKPM, UNIMAS.
-Generate questions about: ${subtopicTitle} (part of ${subjectName}).
+Generate questions strictly about: ${subtopicTitle} (a subtopic within ${subjectName}).
 Difficulty: ${difficulty} — ${difficultyNote[difficulty]}
+
+IMPORTANT - STAY ON TOPIC: Every single question, option, and answer must test understanding of "${subtopicTitle}" specifically. Do not drift into other subtopics of ${subjectName} or unrelated general knowledge, even at higher question counts. If you cannot think of a genuinely new angle on "${subtopicTitle}", rephrase or test a different facet of it (definition, application, comparison, example, implication) rather than moving to a different topic.
 ${languageInstruction}
 ${typeInstructions[quizType]}
 Generate only the questions in the exact format specified. No introduction, no extra text.`

@@ -114,9 +114,37 @@ function DeleteModal({ onCancel, onConfirm }) {
   )
 }
 
+function BottomNav({ page, setPage }) {
+  const items = [
+    { id: 'dashboard', label: 'Home', icon: <LayoutDashboard size={20} strokeWidth={2} /> },
+    { id: 'subjects', label: 'Subjects', icon: <BookOpen size={20} strokeWidth={2} /> },
+    { id: 'notes', label: 'Notes', icon: <FileText size={20} strokeWidth={2} /> },
+    { id: 'history', label: 'History', icon: <History size={20} strokeWidth={2} /> },
+    { id: 'settings', label: 'Settings', icon: <Settings size={20} strokeWidth={2} /> },
+  ]
+  return (
+    <div
+      className="md:hidden fixed bottom-0 left-0 right-0 z-20 flex app-sidebar"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      {items.map(item => (
+        <button
+          key={item.id}
+          onClick={() => setPage(item.id)}
+          className="flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium"
+          style={{ color: page === item.id ? 'var(--primary)' : 'var(--text-muted)' }}
+        >
+          {item.icon}
+          {item.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function Sidebar({ page, setPage, profile, session, handleLogout }) {
   return (
-    <div className="w-56 app-sidebar flex flex-col fixed h-full z-10">
+    <div className="hidden md:flex w-56 app-sidebar flex-col fixed h-full z-10">
       <div className="p-5" style={{ borderBottom: '1px solid var(--border)' }}>
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0" style={{ backgroundColor: 'var(--primary-soft)', border: '1px solid var(--border)' }}>
@@ -381,8 +409,9 @@ export default function Dashboard({ session, darkMode, setDarkMode }) {
       </AnimatePresence>
 
       <Sidebar page={page} setPage={setPage} profile={profile} session={session} handleLogout={handleLogout} />
+      <BottomNav page={page} setPage={setPage} />
 
-      <div className="ml-56 flex-1 p-8 app-bg">
+      <div className="flex-1 md:ml-56 p-4 sm:p-6 md:p-8 pb-24 md:pb-8 app-bg">
         <div className="flex justify-end mb-4">
           <WalkthroughButton onClick={() => setShowWalkthrough(true)} />
         </div>
@@ -456,7 +485,7 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, onAd
         </motion.div>
       )}
 
-      <motion.div className="grid grid-cols-3 gap-4 mb-8" variants={staggerContainer} initial="initial" animate="animate">
+      <motion.div className="grid grid-cols-3 gap-2 sm:gap-4 mb-8" variants={staggerContainer} initial="initial" animate="animate">
         {[
           { label: 'Subjects', value: subjects.length, sub: 'This semester' },
           { label: 'Topics done', value: totalDone, sub: `of ${totalTopics} total` },
@@ -469,12 +498,12 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, onAd
           <motion.div
             key={stat.label}
             id={stat.label === 'Study streak' ? 'streak-card' : undefined}
-            className="app-card rounded-2xl p-5"
+            className="app-card rounded-2xl p-3 sm:p-5"
             variants={cardItem}
           >
-            <div className="text-xs font-medium uppercase tracking-wide mb-2 app-muted">{stat.label}</div>
-            <div className="text-3xl font-bold app-heading">{stat.value}</div>
-            <div className="text-xs mt-1" style={{ color: 'var(--primary)' }}>{stat.sub}</div>
+            <div className="text-[10px] sm:text-xs font-medium uppercase tracking-wide mb-1 sm:mb-2 app-muted truncate">{stat.label}</div>
+            <div className="text-xl sm:text-3xl font-bold app-heading">{stat.value}</div>
+            <div className="text-[10px] sm:text-xs mt-1 truncate" style={{ color: 'var(--primary)' }}>{stat.sub}</div>
           </motion.div>
         ))}
       </motion.div>
@@ -589,11 +618,11 @@ function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddS
                 whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}
                 transition={{ type: 'spring', stiffness: 300, damping: 24 }}
               >
-                <div className="flex items-start gap-4 mb-4">
+                <div className="flex flex-wrap items-start gap-4 mb-4">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--surface-soft)', border: '1px solid var(--border)' }}>
                     {typeIcon(subject.subject_type)}
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-[160px]">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-sm font-bold app-heading">{subject.name}</h3>
                       <span className={`text-xs px-2 py-0.5 rounded-lg border font-medium ${urgencyColor(days)}`}>
@@ -624,10 +653,10 @@ function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddS
                 </div>
                 <div className="flex flex-col gap-2 mt-4">
                   {subjectSubtopics.map(subtopic => (
-                    <div key={subtopic.id} className="flex items-center gap-2">
+                    <div key={subtopic.id} className="flex flex-wrap sm:flex-nowrap items-center gap-2">
                       <button
                         onClick={() => toggleSubtopic(subtopic.id, subtopic.is_done)}
-                        className="flex-1 flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition-all"
+                        className="w-full sm:flex-1 flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition-all"
                         style={{
                           backgroundColor: subtopic.is_done ? 'var(--primary-soft)' : 'var(--surface-soft)',
                           border: `1px solid ${subtopic.is_done ? 'var(--primary)' : 'var(--border)'}`,
