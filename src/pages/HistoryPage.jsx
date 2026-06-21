@@ -115,7 +115,7 @@ export default function HistoryPage({ session, onRetryQuiz }) {
           <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
 
             <motion.div
-              className="grid grid-cols-3 gap-4 mb-8"
+              className="grid grid-cols-3 gap-2 sm:gap-4 mb-8"
               variants={staggerContainer}
               initial="initial"
               animate="animate"
@@ -130,10 +130,10 @@ export default function HistoryPage({ session, onRetryQuiz }) {
                 },
                 { label: 'MCQ quizzes', value: quizResults.filter(r => r.quiz_type === 'mcq').length, sub: 'Multiple choice' },
               ].map(stat => (
-                <motion.div key={stat.label} className="app-card rounded-2xl p-5" variants={cardItem}>
-                  <div className="text-xs font-medium uppercase tracking-wide mb-2 app-muted">{stat.label}</div>
-                  <div className="text-3xl font-bold app-heading" style={stat.valueColor ? { color: stat.valueColor } : {}}>{stat.value}</div>
-                  <div className="text-xs mt-1" style={{ color: 'var(--primary)' }}>{stat.sub}</div>
+                <motion.div key={stat.label} className="app-card rounded-2xl p-3 sm:p-5" variants={cardItem}>
+                  <div className="text-[10px] sm:text-xs font-medium uppercase tracking-wide mb-1 sm:mb-2 app-muted truncate">{stat.label}</div>
+                  <div className="text-xl sm:text-3xl font-bold app-heading" style={stat.valueColor ? { color: stat.valueColor } : {}}>{stat.value}</div>
+                  <div className="text-[10px] sm:text-xs mt-1 truncate" style={{ color: 'var(--primary)' }}>{stat.sub}</div>
                 </motion.div>
               ))}
             </motion.div>

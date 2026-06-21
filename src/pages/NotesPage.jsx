@@ -163,10 +163,10 @@ export default function NotesPage({ session }) {
   const groups = groupBySubject()
 
   return (
-    <motion.div variants={fadeUp} initial="initial" animate="animate" className="flex gap-6 h-full">
+    <motion.div variants={fadeUp} initial="initial" animate="animate" className="flex flex-col md:flex-row gap-6 h-full">
 
       {/* Left panel — note list */}
-      <div className="w-72 flex-shrink-0 flex flex-col gap-4">
+      <div className="w-full md:w-72 flex-shrink-0 flex flex-col gap-4">
         <div>
           <h1 className="text-2xl font-bold app-heading">My Notes</h1>
           <p className="text-sm app-muted mt-1">{notes.length} note{notes.length !== 1 ? 's' : ''} saved</p>
@@ -220,14 +220,14 @@ export default function NotesPage({ session }) {
           <div className="app-card rounded-2xl p-6 flex flex-col gap-4">
 
             {/* Header */}
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="text-lg font-bold app-heading">{selectedNote.title}</h2>
                 <div className="text-xs app-muted mt-1">
                   {getSubjectName(selectedNote.subject_id)} · {formatDate(selectedNote.updated_at)}
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 flex-wrap">
                 {editing ? (
                   <>
                     <motion.button
