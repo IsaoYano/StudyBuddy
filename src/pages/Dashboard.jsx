@@ -415,7 +415,7 @@ export default function Dashboard({ session, darkMode, setDarkMode }) {
       <Sidebar page={page} setPage={setPage} profile={profile} session={session} handleLogout={handleLogout} />
       <BottomNav page={page} setPage={setPage} />
 
-      <div className="flex-1 md:ml-56 p-4 sm:p-6 md:p-8 pb-24 md:pb-8 app-bg">
+      <div className="flex-1 min-w-0 md:ml-56 p-4 sm:p-6 md:p-8 pb-24 md:pb-8 app-bg overflow-x-hidden">
         <div className="flex justify-end mb-4">
           <WalkthroughButton onClick={() => setShowWalkthrough(true)} />
         </div>
