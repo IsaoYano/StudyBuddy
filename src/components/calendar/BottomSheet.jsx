@@ -1,13 +1,13 @@
-import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { fromDateString, toDateString, getExamsOnDate, getPlansOnDate, getSubjectColorIndex, SUBJECT_COLORS } from '../../utils/calendarUtils'
 
-const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','decembrie']
+const MONTH_NAMES_FIXED = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
 
 function formatDate(ds) {
   const d = fromDateString(ds)
-  return `${DAY_NAMES[d.getDay()]}, ${d.getDate()} ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`
+  return `${DAY_NAMES[d.getDay()]}, ${d.getDate()} ${MONTH_NAMES_FIXED[d.getMonth()]} ${d.getFullYear()}`
 }
 
 function getMostUrgentSubject(subjects) {
@@ -24,29 +24,8 @@ export default function BottomSheet({ isOpen, onClose, selectedDate, subjects, p
   const dayPlans = getPlansOnDate(plans, selectedDate || '')
   const urgentSubject = isToday ? getMostUrgentSubject(subjects) : null
 
-  const [pending, setPending] = useState({})
-
-  function toggle(subjectId) {
-    const currently = dayPlans.some(p => p.subject_id === subjectId)
-    const pendingState = pending[subjectId]
-    const effectiveOn = pendingState !== undefined ? pendingState : currently
-    setPending(p => ({ ...p, [subjectId]: !effectiveOn }))
-  }
-
-  async function handleSave() {
-    for (const [subjectId, shouldBe] of Object.entries(pending)) {
-      const currently = dayPlans.some(p => p.subject_id === subjectId)
-      if (shouldBe !== currently) {
-        await onTogglePlan(subjectId, selectedDate, currently)
-      }
-    }
-    setPending({})
-    onClose()
-  }
-
-  function isOn(subjectId) {
-    const currently = dayPlans.some(p => p.subject_id === subjectId)
-    return pending[subjectId] !== undefined ? pending[subjectId] : currently
+  function isPlanned(subjectId) {
+    return dayPlans.some(p => p.subject_id === subjectId)
   }
 
   if (!isOpen || !selectedDate) return null
@@ -78,11 +57,7 @@ export default function BottomSheet({ isOpen, onClose, selectedDate, subjects, p
         onDragEnd={(_, info) => { if (info.offset.y > 80) onClose() }}
       >
         {/* Drag handle — also tappable to close */}
-        <button
-          onClick={onClose}
-          aria-label="Close panel"
-          className="flex justify-center pt-3 pb-2 w-full"
-        >
+        <button onClick={onClose} aria-label="Close panel" className="flex justify-center pt-3 pb-2 w-full">
           <div className="w-8 h-1 rounded-full" style={{ backgroundColor: 'var(--border)' }} />
         </button>
 
@@ -100,33 +75,41 @@ export default function BottomSheet({ isOpen, onClose, selectedDate, subjects, p
 
           {subjects.length > 0 && (
             <div className="flex flex-col gap-2">
-              <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Plan study sessions</div>
+              <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                Tap a subject to add it to your study plan
+              </div>
               {subjects.map(subject => {
                 const color = SUBJECT_COLORS[getSubjectColorIndex(subject.id)]
-                const on = isOn(subject.id)
+                const planned = isPlanned(subject.id)
                 return (
-                  <div key={subject.id} className="flex items-center gap-3 min-h-[44px]">
+                  <motion.button
+                    key={subject.id}
+                    onClick={() => onTogglePlan(subject.id, selectedDate, planned)}
+                    aria-label={planned ? `Remove ${subject.name} from plan` : `Plan ${subject.name} for this day`}
+                    className="flex items-center gap-3 px-4 rounded-xl text-left transition-all min-h-[56px]"
+                    style={{
+                      backgroundColor: planned ? 'var(--success-soft)' : 'var(--surface-soft)',
+                      border: `1px solid ${planned ? 'var(--success)' : 'var(--border)'}`,
+                    }}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.97 }}
+                  >
                     <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${color.dot}`} aria-hidden />
-                    <span className="flex-1 text-sm" style={{ color: 'var(--text-body)' }}>{subject.name}</span>
-                    <button
-                      onClick={() => toggle(subject.id)}
-                      aria-label={`${on ? 'Remove' : 'Add'} ${subject.name} study session`}
-                      className="relative rounded-full transition-colors focus:outline-none focus:ring-2"
+                    <span className="flex-1 text-sm font-medium" style={{ color: 'var(--text-body)' }}>{subject.name}</span>
+                    <motion.span
+                      key={planned ? 'on' : 'off'}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg flex-shrink-0"
                       style={{
-                        width: 44, height: 26,
-                        backgroundColor: on ? 'var(--primary)' : 'var(--surface-soft)',
-                        border: `1px solid ${on ? 'var(--primary)' : 'var(--border)'}`,
-                        minWidth: 44, minHeight: 44,
-                        display: 'flex', alignItems: 'center',
+                        backgroundColor: planned ? 'var(--success)' : 'transparent',
+                        color: planned ? '#fff' : 'var(--text-muted)',
+                        border: planned ? 'none' : '1px solid var(--border)',
                       }}
                     >
-                      <motion.span
-                        className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm"
-                        animate={{ left: on ? '20px' : '2px' }}
-                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                      />
-                    </button>
-                  </div>
+                      {planned ? '✓ Planned' : '+ Plan'}
+                    </motion.span>
+                  </motion.button>
                 )
               })}
             </div>
@@ -134,7 +117,7 @@ export default function BottomSheet({ isOpen, onClose, selectedDate, subjects, p
 
           {isToday && urgentSubject && (
             <div className="rounded-xl px-4 py-3" style={{ backgroundColor: 'var(--primary-light)', border: '1px solid var(--border)' }}>
-              <div className="text-xs font-semibold mb-2" style={{ color: 'var(--primary)' }}>Study now</div>
+              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--primary)' }}>Most urgent right now</div>
               <button
                 onClick={() => { onNavigateToSubject(urgentSubject.id); onClose() }}
                 className="text-sm font-semibold text-left"
@@ -146,13 +129,13 @@ export default function BottomSheet({ isOpen, onClose, selectedDate, subjects, p
           )}
 
           <motion.button
-            onClick={handleSave}
-            className="w-full py-3 rounded-xl text-sm font-semibold text-white mt-2"
-            style={{ backgroundColor: 'var(--primary)', minHeight: 44 }}
+            onClick={onClose}
+            className="w-full py-3 rounded-xl text-sm font-semibold mt-1"
+            style={{ backgroundColor: 'var(--primary)', color: '#fff', minHeight: 44 }}
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
           >
-            Save
+            Done
           </motion.button>
         </div>
       </motion.div>

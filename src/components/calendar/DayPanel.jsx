@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { fromDateString, toDateString, getExamsOnDate, getPlansOnDate, getSubjectColorIndex, SUBJECT_COLORS } from '../../utils/calendarUtils'
 
@@ -24,30 +23,7 @@ export default function DayPanel({ selectedDate, subjects, plans, onTogglePlan, 
   const dayPlans = getPlansOnDate(plans, selectedDate)
   const urgentSubject = isToday ? getMostUrgentSubject(subjects) : null
 
-  const [pending, setPending] = useState({})
-
-  function toggle(subjectId) {
-    const currently = dayPlans.some(p => p.subject_id === subjectId) || pending[subjectId] === true
-    const wasRemoved = pending[subjectId] === false
-    if (currently && !wasRemoved) {
-      setPending(p => ({ ...p, [subjectId]: false }))
-    } else {
-      setPending(p => ({ ...p, [subjectId]: true }))
-    }
-  }
-
-  async function handleSave() {
-    for (const [subjectId, shouldAdd] of Object.entries(pending)) {
-      const currently = dayPlans.some(p => p.subject_id === subjectId)
-      if (shouldAdd !== currently) {
-        await onTogglePlan(subjectId, selectedDate, currently)
-      }
-    }
-    setPending({})
-  }
-
-  function isOn(subjectId) {
-    if (pending[subjectId] !== undefined) return pending[subjectId]
+  function isPlanned(subjectId) {
     return dayPlans.some(p => p.subject_id === subjectId)
   }
 
@@ -83,31 +59,41 @@ export default function DayPanel({ selectedDate, subjects, plans, onTogglePlan, 
 
       {subjects.length > 0 && (
         <div className="flex flex-col gap-2">
-          <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Plan study sessions</div>
+          <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+            Tap a subject to add it to your study plan
+          </div>
           {subjects.map(subject => {
             const color = SUBJECT_COLORS[getSubjectColorIndex(subject.id)]
-            const on = isOn(subject.id)
+            const planned = isPlanned(subject.id)
             return (
-              <div key={subject.id} className="flex items-center gap-3 py-1">
+              <motion.button
+                key={subject.id}
+                onClick={() => onTogglePlan(subject.id, selectedDate, planned)}
+                aria-label={planned ? `Remove ${subject.name} from plan` : `Plan ${subject.name} for this day`}
+                className="flex items-center gap-3 px-4 rounded-xl text-left transition-all min-h-[52px]"
+                style={{
+                  backgroundColor: planned ? 'var(--success-soft)' : 'var(--surface-soft)',
+                  border: `1px solid ${planned ? 'var(--success)' : 'var(--border)'}`,
+                }}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.97 }}
+              >
                 <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${color.dot}`} aria-hidden />
-                <span className="flex-1 text-sm" style={{ color: 'var(--text-body)' }}>{subject.name}</span>
-                <button
-                  onClick={() => toggle(subject.id)}
-                  aria-label={`${on ? 'Remove' : 'Add'} ${subject.name} study session`}
-                  className="relative w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2"
+                <span className="flex-1 text-sm font-medium" style={{ color: 'var(--text-body)' }}>{subject.name}</span>
+                <motion.span
+                  key={planned ? 'on' : 'off'}
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="text-xs font-semibold px-3 py-1 rounded-lg flex-shrink-0"
                   style={{
-                    backgroundColor: on ? 'var(--primary)' : 'var(--surface-soft)',
-                    border: `1px solid ${on ? 'var(--primary)' : 'var(--border)'}`,
-                    minWidth: 44, minHeight: 24,
+                    backgroundColor: planned ? 'var(--success)' : 'transparent',
+                    color: planned ? '#fff' : 'var(--text-muted)',
+                    border: planned ? 'none' : '1px solid var(--border)',
                   }}
                 >
-                  <motion.span
-                    className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm"
-                    animate={{ left: on ? '22px' : '2px' }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                  />
-                </button>
-              </div>
+                  {planned ? '✓ Planned' : '+ Plan'}
+                </motion.span>
+              </motion.button>
             )
           })}
         </div>
@@ -115,7 +101,7 @@ export default function DayPanel({ selectedDate, subjects, plans, onTogglePlan, 
 
       {isToday && urgentSubject && (
         <div className="rounded-xl px-4 py-3" style={{ backgroundColor: 'var(--primary-light)', border: '1px solid var(--border)' }}>
-          <div className="text-xs font-semibold mb-2" style={{ color: 'var(--primary)' }}>Study now</div>
+          <div className="text-xs font-semibold mb-1" style={{ color: 'var(--primary)' }}>Most urgent right now</div>
           <button
             onClick={() => onNavigateToSubject(urgentSubject.id)}
             className="text-sm font-semibold hover:underline text-left"
@@ -124,18 +110,6 @@ export default function DayPanel({ selectedDate, subjects, plans, onTogglePlan, 
             Start studying {urgentSubject.name} →
           </button>
         </div>
-      )}
-
-      {Object.keys(pending).length > 0 && (
-        <motion.button
-          onClick={handleSave}
-          className="w-full py-2.5 rounded-xl text-sm font-semibold text-white"
-          style={{ backgroundColor: 'var(--primary)' }}
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          Save changes
-        </motion.button>
       )}
     </motion.div>
   )
