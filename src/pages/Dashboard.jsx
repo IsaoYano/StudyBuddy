@@ -496,7 +496,7 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, sess
           { label: 'Topics done', value: totalDone, sub: `of ${totalTopics} total` },
           {
             label: 'Study streak',
-            value: streak > 0 ? `${streak} 🔥` : '0',
+            value: streak > 0 ? `${streak}` : '0',
             sub: streak > 0 ? `${streak} day${streak > 1 ? 's' : ''} in a row` : 'Complete a quiz to start',
           },
         ].map(stat => (
@@ -569,7 +569,7 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, sess
                     <div className="text-xs app-muted mt-0.5">{done} of {total} subtopics done</div>
                     {subject.exam_date && (
                       <div className="text-xs font-semibold mt-0.5" style={{ color: days <= 3 ? 'var(--danger)' : 'var(--text-muted)' }}>
-                        📅 Exam {examCountdown(subject.exam_date)}
+                        Exam {examCountdown(subject.exam_date)}
                       </div>
                     )}
                     <div className="mt-2 rounded-full h-1.5 app-progress-track">

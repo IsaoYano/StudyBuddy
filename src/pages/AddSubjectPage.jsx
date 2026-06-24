@@ -132,7 +132,7 @@ export default function AddSubjectPage({ session, onBack, onSaved }) {
       <div className="max-w-2xl mx-auto p-6">
 
         <div className="flex items-center gap-3 mb-8">
-          <button onClick={onBack} className="text-sm app-muted transition-colors hover:opacity-80">← Back</button>
+          <button onClick={onBack} aria-label="Go back" className="w-9 h-9 flex items-center justify-center rounded-xl text-base font-bold app-muted hover:opacity-80 transition-colors flex-shrink-0" style={{ border: '1px solid var(--border)' }}>←</button>
           <div>
             <h1 className="text-xl font-bold app-heading">Add subject</h1>
             <p className="text-xs app-muted">Fill in the details for your subject</p>

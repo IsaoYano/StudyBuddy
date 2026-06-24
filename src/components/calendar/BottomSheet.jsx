@@ -66,7 +66,6 @@ export default function BottomSheet({ isOpen, onClose, selectedDate, subjects, p
 
           {exams.length > 0 && (
             <div className="rounded-xl px-4 py-3 flex items-center gap-2" style={{ backgroundColor: 'var(--danger-soft)', border: '1px solid var(--danger)' }}>
-              <span>📅</span>
               <span className="text-sm font-semibold" style={{ color: 'var(--danger)' }}>
                 {exams.map(e => e.name).join(', ')} exam{exams.length > 1 ? 's' : ''} today!
               </span>

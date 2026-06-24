@@ -220,7 +220,7 @@ export default function FlashcardPage({ subject, subtopic, session, studentProfi
     return (
       <div className="min-h-screen app-bg">
         <div className="px-6 py-4 flex items-center gap-4 sticky top-0 z-10" style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
-          <button onClick={onBack} className="text-sm app-muted transition-colors hover:opacity-80">← Back</button>
+          <button onClick={onBack} aria-label="Go back" className="w-9 h-9 flex items-center justify-center rounded-xl text-base font-bold app-muted hover:opacity-80 transition-colors flex-shrink-0" style={{ border: '1px solid var(--border)' }}>←</button>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-bold app-heading truncate">{subtopic.title}</div>
             <div className="text-xs app-muted">{subject.name} · Flashcards</div>
@@ -368,7 +368,7 @@ export default function FlashcardPage({ subject, subtopic, session, studentProfi
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3 }}
         >
-          <div className="text-5xl mb-4">🎉</div>
+          <div className="text-5xl mb-4 font-bold" style={{ color: 'var(--primary)' }}>★</div>
           <h2 className="text-xl font-bold app-heading mb-2">Session complete!</h2>
           <p className="text-sm app-muted mb-6">Great work on your flashcard review.</p>
 

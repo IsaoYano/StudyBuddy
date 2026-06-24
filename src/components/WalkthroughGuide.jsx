@@ -69,9 +69,9 @@ const STEPS = [
     page: 'subjects',
     title: 'Add your first subject',
     description: 'Tap this button to add a subject with its exam date. You can upload a PDF, PPTX, DOCX, or image right away.',
-    actionHint: 'Tap the button to continue the tour',
-    requiresAction: true,
-    actionTargetId: 'guide-add-subject-subjects',
+    actionHint: 'Tap Next to continue the tour',
+    requiresAction: false,
+    actionTargetId: null,
     tier: 'important',
     tooltipPrefer: 'bottom',
   },
@@ -196,7 +196,7 @@ function PulsingRing({ rect, padding = 8 }) {
 
 function computeTooltipStyle(rect, prefer, windowWidth, windowHeight) {
   const CARD_W = Math.min(360, windowWidth - 32)
-  const CARD_H = 220
+  const CARD_H = 300  // generous estimate so we never clip
   const GAP = 16
   const PAD = 16
 
@@ -222,16 +222,26 @@ function computeTooltipStyle(rect, prefer, windowWidth, windowHeight) {
     }
   }
 
-  const spaceTop = rect.top
+  const spaceTop    = rect.top
   const spaceBottom = windowHeight - rect.bottom
-  const spaceRight = windowWidth - rect.right
+  const spaceLeft   = rect.left
+  const spaceRight  = windowWidth - rect.right
 
+  // Determine side — if preferred side lacks space, fall through to auto
   let side = prefer
+  if (side !== 'auto') {
+    const hasSpace =
+      (side === 'bottom' && spaceBottom >= CARD_H + GAP) ||
+      (side === 'top'    && spaceTop    >= CARD_H + GAP) ||
+      (side === 'right'  && spaceRight  >= CARD_W + GAP) ||
+      (side === 'left'   && spaceLeft   >= CARD_W + GAP)
+    if (!hasSpace) side = 'auto'
+  }
   if (side === 'auto') {
     side = spaceBottom >= CARD_H + GAP ? 'bottom'
-      : spaceTop >= CARD_H + GAP ? 'top'
-      : spaceRight >= CARD_W + GAP ? 'right'
-      : 'left'
+         : spaceTop    >= CARD_H + GAP ? 'top'
+         : spaceRight  >= CARD_W + GAP ? 'right'
+         : 'left'
   }
 
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v))
@@ -239,7 +249,7 @@ function computeTooltipStyle(rect, prefer, windowWidth, windowHeight) {
   if (side === 'bottom') {
     return {
       position: 'fixed',
-      top: rect.bottom + GAP,
+      top: Math.min(rect.bottom + GAP, windowHeight - CARD_H - PAD),
       left: clamp(rect.left + rect.width / 2 - CARD_W / 2, PAD, windowWidth - CARD_W - PAD),
       width: CARD_W,
       zIndex: 53,
@@ -248,7 +258,7 @@ function computeTooltipStyle(rect, prefer, windowWidth, windowHeight) {
   if (side === 'top') {
     return {
       position: 'fixed',
-      top: rect.top - CARD_H - GAP,
+      top: Math.max(PAD, rect.top - CARD_H - GAP),
       left: clamp(rect.left + rect.width / 2 - CARD_W / 2, PAD, windowWidth - CARD_W - PAD),
       width: CARD_W,
       zIndex: 53,
@@ -258,15 +268,16 @@ function computeTooltipStyle(rect, prefer, windowWidth, windowHeight) {
     return {
       position: 'fixed',
       top: clamp(rect.top + rect.height / 2 - CARD_H / 2, PAD, windowHeight - CARD_H - PAD),
-      left: rect.right + GAP,
+      left: Math.min(rect.right + GAP, windowWidth - CARD_W - PAD),
       width: CARD_W,
       zIndex: 53,
     }
   }
+  // left
   return {
     position: 'fixed',
     top: clamp(rect.top + rect.height / 2 - CARD_H / 2, PAD, windowHeight - CARD_H - PAD),
-    left: rect.left - CARD_W - GAP,
+    left: Math.max(PAD, rect.left - CARD_W - GAP),
     width: CARD_W,
     zIndex: 53,
   }
@@ -542,7 +553,7 @@ export default function WalkthroughGuide({ onClose, onNavigate, currentPage }) {
       setRect(r)
       el.classList.add('guide-target-active')
       setTooltipStyle(computeTooltipStyle(r, current.tooltipPrefer, windowSize.w, windowSize.h))
-    }, 350)
+    }, 500)
   }, [step, windowSize])
 
   function next() {

@@ -58,7 +58,7 @@ export default function StudyPlanSuggester({ subjects, plans, onAddPlan, onClose
       >
         <div className="flex items-center justify-between px-5 pt-5 pb-3" style={{ borderBottom: '1px solid var(--border)' }}>
           <div>
-            <div className="text-base font-bold" style={{ color: 'var(--text)' }}>✨ Suggested study plan</div>
+            <div className="text-base font-bold" style={{ color: 'var(--text)' }}>Suggested study plan</div>
             <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Deselect any sessions you don't want</div>
           </div>
           <button onClick={onClose} aria-label="Close" className="text-sm min-h-[44px] min-w-[44px] flex items-center justify-center" style={{ color: 'var(--text-muted)' }}>✕</button>

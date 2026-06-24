@@ -189,7 +189,7 @@ export default function QuizPage({ subject, subtopic, session, onBack, onComplet
         <div className="w-full max-w-lg">
 
           <motion.div className="flex items-center gap-3 mb-8" variants={fadeUp} initial="initial" animate="animate">
-            <button onClick={onBack} className="text-sm app-muted transition-colors hover:opacity-80">← Back</button>
+            <button onClick={onBack} aria-label="Go back" className="w-9 h-9 flex items-center justify-center rounded-xl text-base font-bold app-muted hover:opacity-80 transition-colors flex-shrink-0" style={{ border: '1px solid var(--border)' }}>←</button>
             <div>
               <div className="text-xs font-medium" style={{ color: 'var(--primary)' }}>{subject.name}</div>
               <div className="text-xs app-muted">Quiz: {subtopic.title}</div>
@@ -342,7 +342,7 @@ export default function QuizPage({ subject, subtopic, session, onBack, onComplet
   return (
     <div className="min-h-screen app-bg">
       <div className="px-6 py-4 flex items-center gap-4" style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
-        <button onClick={onBack} className="text-sm app-muted hover:opacity-80">← Exit</button>
+        <button onClick={onBack} aria-label="Go back" className="w-9 h-9 flex items-center justify-center rounded-xl text-base font-bold app-muted hover:opacity-80 transition-colors flex-shrink-0" style={{ border: '1px solid var(--border)' }}>←</button>
         <div className="flex-1">
           <div className="text-sm font-bold app-heading">{subtopic.title} — Quiz</div>
           <div className="text-xs app-muted">{subject.name} · {quizType.toUpperCase()} · {difficulty}</div>

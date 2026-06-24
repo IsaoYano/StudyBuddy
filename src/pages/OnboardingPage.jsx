@@ -82,10 +82,10 @@ export default function OnboardingPage({ subject, subtopic, onStart, onBack }) {
         >
           <button
             onClick={onBack}
-            className="text-sm app-muted transition-colors hover:opacity-80"
-          >
-            ← Back
-          </button>
+            aria-label="Go back"
+            className="w-9 h-9 flex items-center justify-center rounded-xl text-base font-bold app-muted hover:opacity-80 transition-colors flex-shrink-0"
+            style={{ border: '1px solid var(--border)' }}
+          >←</button>
           <div>
             <div className="text-xs font-medium" style={{ color: 'var(--primary)' }}>{subject.name}</div>
             <div className="text-xs app-muted">Subtopic: {subtopic.title}</div>

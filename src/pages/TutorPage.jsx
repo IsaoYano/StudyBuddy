@@ -177,9 +177,7 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
     <div className="h-screen app-bg flex flex-col overflow-hidden">
 
       <div className="px-6 py-4 flex items-center gap-4 sticky top-0 z-10" style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
-        <button onClick={onBack} className="text-sm app-muted transition-colors hover:opacity-80">
-          ← Exit
-        </button>
+        <button onClick={onBack} aria-label="Go back" className="w-9 h-9 flex items-center justify-center rounded-xl text-base font-bold app-muted hover:opacity-80 transition-colors flex-shrink-0" style={{ border: '1px solid var(--border)' }}>←</button>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold app-heading truncate">{subtopic.title}</div>
           <div className="text-xs app-muted">{subject.name}</div>
@@ -367,7 +365,7 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      {generatingNotes ? 'Generating notes...' : '📝 Generate study notes'}
+                      {generatingNotes ? 'Generating notes...' : 'Generate study notes'}
                     </motion.button>
                   ) : (
                     <div className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>

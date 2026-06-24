@@ -49,7 +49,7 @@ export default function CalendarWidget({ user, subjects, onNavigateToSubject }) 
               className="text-xs font-medium px-3 py-1.5 rounded-lg min-h-[36px]"
               style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)', border: '1px solid var(--border)' }}
             >
-              ✨ Plan week
+              Plan week
             </button>
           </div>
         </div>
@@ -95,7 +95,7 @@ export default function CalendarWidget({ user, subjects, onNavigateToSubject }) 
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
           >
-            ✨ Plan my week
+            Plan my week
           </motion.button>
         </div>
         <DayPanel
@@ -133,7 +133,7 @@ export default function CalendarWidget({ user, subjects, onNavigateToSubject }) 
                 className="text-sm font-medium min-h-[44px] px-2"
                 style={{ color: 'var(--primary)' }}
               >
-                ✨ Plan
+                Plan
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
