@@ -14,6 +14,8 @@ import EditSubjectPage from './EditSubjectPage'
 import { motion, AnimatePresence } from 'framer-motion'
 import { fadeUp, staggerContainer, cardItem, modalBackdrop, modalCard } from '../utils/animations'
 import { calculateStreak } from '../utils/streak'
+import { daysUntil as examCountdown } from '../utils/calendarUtils'
+import CalendarWidget from '../components/calendar/CalendarWidget'
 import {
   LayoutDashboard,
   BookOpen,
@@ -420,7 +422,7 @@ export default function Dashboard({ session, darkMode, setDarkMode }) {
             <LoadingScreen />
           </div>
         ) : page === 'dashboard' ? (
-          <DashboardHome subjects={subjects} subtopics={subtopics} getProgress={getProgress} profile={profile} streak={streak} onAddSubject={() => setPage('add')} onStudy={handleStudy} />
+          <DashboardHome subjects={subjects} subtopics={subtopics} getProgress={getProgress} profile={profile} streak={streak} session={session} onAddSubject={() => setPage('add')} onStudy={handleStudy} onNavigateToSubject={() => setPage('subjects')} />
         ) : page === 'subjects' ? (
           <SubjectsPage subjects={subjects} subtopics={subtopics} getProgress={getProgress} toggleSubtopic={toggleSubtopic} onAddSubject={() => setPage('add')} onStudy={handleStudy} onDirectQuiz={handleDirectQuiz} onFlashcard={handleFlashcard} onEdit={handleEditSubject} onDelete={handleDeleteSubject} />
         ) : page === 'notes' ? (
@@ -435,7 +437,7 @@ export default function Dashboard({ session, darkMode, setDarkMode }) {
   )
 }
 
-function DashboardHome({ subjects, subtopics, getProgress, profile, streak, onAddSubject, onStudy }) {
+function DashboardHome({ subjects, subtopics, getProgress, profile, streak, session, onAddSubject, onStudy, onNavigateToSubject }) {
   const totalDone = subjects.reduce((acc, s) => acc + getProgress(s.id).done, 0)
   const totalTopics = subjects.reduce((acc, s) => acc + getProgress(s.id).total, 0)
 
@@ -450,6 +452,11 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, onAd
 
   return (
     <motion.div variants={fadeUp} initial="initial" animate="animate">
+      <CalendarWidget
+        user={session?.user}
+        subjects={subjects}
+        onNavigateToSubject={onNavigateToSubject}
+      />
       <div className="mb-8">
         <h1 className="text-2xl font-bold app-heading">Good day, {profile?.name || 'there'}</h1>
         <p className="text-sm app-muted mt-1">
@@ -554,6 +561,11 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, onAd
                       )}
                     </div>
                     <div className="text-xs app-muted mt-0.5">{done} of {total} subtopics done</div>
+                    {subject.exam_date && (
+                      <div className="text-xs font-semibold mt-0.5" style={{ color: days <= 3 ? 'var(--danger)' : 'var(--text-muted)' }}>
+                        📅 Exam {examCountdown(subject.exam_date)}
+                      </div>
+                    )}
                     <div className="mt-2 rounded-full h-1.5 app-progress-track">
                       <motion.div
                         className="h-1.5 rounded-full app-progress-fill"

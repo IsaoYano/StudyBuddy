@@ -18,28 +18,53 @@ input, textarea, select {
 
 :root {
   --bg: #ECFDF5;
+  --background: #ECFDF5;
   --surface: #FFFFFF;
   --surface-soft: #F8FAFC;
+  --surface-2: #F8FAFC;
   --border: #BBF7D0;
   --text-main: #064E3B;
+  --text: #064E3B;
   --text-body: #334155;
   --text-muted: #94A3B8;
   --primary: #059669;
+  --primary-light: #D1FAE5;
   --primary-hover: #047857;
   --primary-soft: #D1FAE5;
+  --danger: #dc2626;
+  --danger-soft: rgba(220, 38, 38, 0.12);
+  --success: #059669;
+  --success-soft: rgba(5, 150, 105, 0.12);
 }
 
 .dark {
   --bg: #071A14;
+  --background: #071A14;
   --surface: #0F241C;
   --surface-soft: #132E24;
+  --surface-2: #132E24;
   --border: #214D3D;
   --text-main: #ECFDF5;
+  --text: #ECFDF5;
   --text-body: #D1E7DD;
   --text-muted: #8FA39A;
   --primary: #34D399;
+  --primary-light: rgba(52, 211, 153, 0.15);
   --primary-hover: #10B981;
   --primary-soft: rgba(52, 211, 153, 0.12);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.12);
+  --success: #34D399;
+  --success-soft: rgba(52, 211, 153, 0.12);
+}
+
+/* hide scrollbar on date strip */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 .app-bg {
