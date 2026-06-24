@@ -119,9 +119,9 @@ function DeleteModal({ onCancel, onConfirm }) {
 function BottomNav({ page, setPage }) {
   const items = [
     { id: 'dashboard', label: 'Home', icon: <LayoutDashboard size={20} strokeWidth={2} /> },
-    { id: 'subjects', label: 'Subjects', icon: <BookOpen size={20} strokeWidth={2} /> },
-    { id: 'notes', label: 'Notes', icon: <FileText size={20} strokeWidth={2} /> },
-    { id: 'history', label: 'History', icon: <History size={20} strokeWidth={2} /> },
+    { id: 'subjects', label: 'Subjects', icon: <BookOpen size={20} strokeWidth={2} />, domId: 'bottom-nav-subjects' },
+    { id: 'notes', label: 'Notes', icon: <FileText size={20} strokeWidth={2} />, domId: 'bottom-nav-notes' },
+    { id: 'history', label: 'History', icon: <History size={20} strokeWidth={2} />, domId: 'bottom-nav-history' },
     { id: 'settings', label: 'Settings', icon: <Settings size={20} strokeWidth={2} /> },
   ]
   return (
@@ -132,6 +132,7 @@ function BottomNav({ page, setPage }) {
       {items.map(item => (
         <button
           key={item.id}
+          id={item.domId}
           onClick={() => setPage(item.id)}
           className="flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium"
           style={{ color: page === item.id ? 'var(--primary)' : 'var(--text-muted)' }}
@@ -406,6 +407,7 @@ export default function Dashboard({ session, darkMode, setDarkMode }) {
           <WalkthroughGuide
             onClose={() => setShowWalkthrough(false)}
             onNavigate={(p) => setPage(p)}
+            currentPage={page}
           />
         )}
       </AnimatePresence>
@@ -461,6 +463,7 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, sess
 
       {topSubject && topSubtopic && (
         <motion.div
+          id="guide-study-banner"
           className="bg-emerald-700 rounded-2xl p-5 mb-8 flex items-center justify-between gap-4"
           style={{ border: '1px solid var(--border)' }}
           initial={{ opacity: 0, y: 12 }}
@@ -510,11 +513,13 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, sess
         ))}
       </motion.div>
 
-      <CalendarWidget
-        user={session?.user}
-        subjects={subjects}
-        onNavigateToSubject={onNavigateToSubject}
-      />
+      <div id="guide-calendar">
+        <CalendarWidget
+          user={session?.user}
+          subjects={subjects}
+          onNavigateToSubject={onNavigateToSubject}
+        />
+      </div>
 
       {subjects.length === 0 ? (
         <motion.div className="app-card rounded-2xl p-12 text-center" style={{ borderStyle: 'dashed' }} variants={cardItem} initial="initial" animate="animate">
@@ -598,6 +603,7 @@ function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddS
           <p className="text-sm app-muted mt-1">Track your subtopics and mark them as done</p>
         </div>
         <motion.button
+          id="guide-add-subject-subjects"
           onClick={onAddSubject}
           className="text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors text-white"
           style={{ backgroundColor: 'var(--primary)' }}
@@ -618,7 +624,7 @@ function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddS
         </motion.div>
       ) : (
         <motion.div className="flex flex-col gap-4" variants={staggerContainer} initial="initial" animate="animate">
-          {subjects.map(subject => {
+          {subjects.map((subject, subjectIndex) => {
             const days = daysUntil(subject.exam_date)
             const { done, total } = getProgress(subject.id)
             const pct = total > 0 ? Math.round((done / total) * 100) : 0
@@ -665,8 +671,8 @@ function SubjectsPage({ subjects, subtopics, getProgress, toggleSubtopic, onAddS
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 mt-4">
-                  {subjectSubtopics.map(subtopic => (
-                    <div key={subtopic.id} className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                  {subjectSubtopics.map((subtopic, index) => (
+                    <div key={subtopic.id} id={subjectIndex === 0 && index === 0 ? 'guide-subtopic-actions' : undefined} className="flex flex-wrap sm:flex-nowrap items-center gap-2">
                       <button
                         onClick={() => toggleSubtopic(subtopic.id, subtopic.is_done)}
                         className="w-full sm:flex-1 flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition-all"

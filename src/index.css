@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* WalkthroughGuide — elevate targeted element above spotlight overlay */
+.guide-target-active {
+  position: relative !important;
+  z-index: 51 !important;
+}
+
 html, body {
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
