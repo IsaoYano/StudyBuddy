@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   toDateString, getExamsOnDate, hasStreak, getPlansOnDate, getSubjectColorIndex, SUBJECT_COLORS
@@ -10,7 +10,8 @@ function buildWindow(weekOffset) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const start = new Date(today)
-  start.setDate(today.getDate() - 7 + weekOffset * 7)
+  // start 1 day before today so today is the 2nd chip (index 1)
+  start.setDate(today.getDate() - 1 + weekOffset * 7)
   const days = []
   for (let i = 0; i < 14; i++) {
     const d = new Date(start)

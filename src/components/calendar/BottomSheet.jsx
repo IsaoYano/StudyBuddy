@@ -75,8 +75,8 @@ export default function BottomSheet({ isOpen, onClose, selectedDate, subjects, p
 
           {subjects.length > 0 && (
             <div className="flex flex-col gap-2">
-              <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-                Tap a subject to add it to your study plan
+              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                What are you studying today?
               </div>
               {subjects.map(subject => {
                 const color = SUBJECT_COLORS[getSubjectColorIndex(subject.id)]
