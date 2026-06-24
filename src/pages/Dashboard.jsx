@@ -452,11 +452,6 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, sess
 
   return (
     <motion.div variants={fadeUp} initial="initial" animate="animate">
-      <CalendarWidget
-        user={session?.user}
-        subjects={subjects}
-        onNavigateToSubject={onNavigateToSubject}
-      />
       <div className="mb-8">
         <h1 className="text-2xl font-bold app-heading">Good day, {profile?.name || 'there'}</h1>
         <p className="text-sm app-muted mt-1">
@@ -514,6 +509,12 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, sess
           </motion.div>
         ))}
       </motion.div>
+
+      <CalendarWidget
+        user={session?.user}
+        subjects={subjects}
+        onNavigateToSubject={onNavigateToSubject}
+      />
 
       {subjects.length === 0 ? (
         <motion.div className="app-card rounded-2xl p-12 text-center" style={{ borderStyle: 'dashed' }} variants={cardItem} initial="initial" animate="animate">
