@@ -188,7 +188,7 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-6 max-w-3xl w-full mx-auto">
+      <div className="flex-1 overflow-y-auto scrollbar-hide px-4 py-6 max-w-3xl w-full mx-auto">
 
         <motion.div
           className="rounded-2xl p-4 mb-6 flex items-start gap-3"
