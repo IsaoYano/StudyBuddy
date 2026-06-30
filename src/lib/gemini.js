@@ -237,3 +237,41 @@ Write in ${studentProfile?.language || 'English'}. Be clear, concise and student
 
   throw new Error(JSON.stringify(lastError) || 'All Groq keys failed')
 }
+export async function generateLifelineOptions(front, back) {
+  const systemPrompt = `You are generating multiple choice distractors for a flashcard.
+The question is: "${front}"
+The correct answer is: "${back}"
+Generate exactly 3 WRONG but plausible answers a confused student might choose.
+Each wrong answer must be clearly incorrect but related to the topic.
+Keep each answer as short as the correct answer — one phrase or sentence maximum.
+Respond with ONLY the 3 wrong answers, one per line, no numbering, no labels, no extra text.`
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: 'Generate the 3 wrong answers now.' }
+  ]
+  let lastError = null
+  for (const key of GROQ_KEYS) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages, max_tokens: 200, temperature: 0.7 })
+      })
+      const data = await response.json()
+      if (!response.ok) { lastError = data.error; continue }
+      const lines = data.choices[0].message.content
+        .split('\n').map(l => l.trim()).filter(l => l.length > 0).slice(0, 3)
+      if (lines.length < 3) throw new Error('Not enough distractors returned')
+      const options = [...lines, back]
+      for (let i = options.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[options[i], options[j]] = [options[j], options[i]]
+      }
+      return options
+    } catch (err) {
+      lastError = err
+      continue
+    }
+  }
+  throw new Error(JSON.stringify(lastError) || 'All Groq keys failed')
+}
