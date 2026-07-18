@@ -4,12 +4,46 @@ import { supabase } from '../lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
 import { fadeUp, staggerContainer, cardItem } from '../utils/animations'
 
+const FEEDBACK_TYPES = [
+  { value: 'bug', label: 'Bug Report' },
+  { value: 'feature', label: 'Feature Request' },
+  { value: 'general', label: 'General Feedback' },
+  { value: 'content', label: 'Content Issue' },
+]
+
+const APP_SCREENS = ['Dashboard', 'Subjects', 'Athena Tutor', 'Quiz', 'Flashcards', 'Notes', 'Calendar', 'Progress', 'History', 'Settings', 'Other']
+
 export default function SettingsPage({ session, onNameUpdate, darkMode, setDarkMode }) {
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
   const [fetchLoading, setFetchLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [fbType, setFbType] = useState('general')
+  const [fbDescription, setFbDescription] = useState('')
+  const [fbScreen, setFbScreen] = useState('')
+  const [fbSending, setFbSending] = useState(false)
+  const [fbSent, setFbSent] = useState(false)
+
+  async function handleSendFeedback(e) {
+    e.preventDefault()
+    if (!fbDescription.trim() || fbSending) return
+    setFbSending(true)
+    const { error: fbError } = await supabase.from('feedback').insert({
+      user_id: session.user.id,
+      type: fbType,
+      description: fbDescription.trim(),
+      screen: fbScreen || null,
+      device: navigator.userAgent.slice(0, 250),
+    })
+    if (!fbError) {
+      setFbSent(true)
+      setFbDescription('')
+      setFbScreen('')
+      setTimeout(() => setFbSent(false), 4000)
+    }
+    setFbSending(false)
+  }
 
   useEffect(() => { fetchProfile() }, [])
 
@@ -152,6 +186,70 @@ export default function SettingsPage({ session, onNameUpdate, darkMode, setDarkM
               </div>
             ))}
           </div>
+        </motion.div>
+
+        <motion.div className="app-card rounded-2xl p-6" variants={cardItem}>
+          <h2 className="text-sm font-semibold app-heading mb-1">Help &amp; feedback</h2>
+          <p className="text-xs app-muted mb-4">Report a bug or tell us what you think</p>
+
+          <AnimatePresence>
+            {fbSent && (
+              <motion.div
+                className="rounded-xl px-4 py-3 mb-4 text-sm"
+                style={{ backgroundColor: 'var(--primary-soft)', border: '1px solid var(--border)', color: 'var(--primary)' }}
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+              >
+                Thank you — your feedback has been sent.
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <form onSubmit={handleSendFeedback} className="flex flex-col gap-4">
+            <div>
+              <label className="text-xs font-medium app-muted mb-1.5 block">Type</label>
+              <select
+                value={fbType}
+                onChange={e => setFbType(e.target.value)}
+                className="w-full rounded-xl px-4 py-2.5 text-sm app-input"
+              >
+                {FEEDBACK_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium app-muted mb-1.5 block">Description</label>
+              <textarea
+                value={fbDescription}
+                onChange={e => setFbDescription(e.target.value)}
+                placeholder="Describe the issue or your idea..."
+                required
+                rows={3}
+                className="w-full rounded-xl px-4 py-2.5 text-sm resize-none app-input"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium app-muted mb-1.5 block">Screen / feature (optional)</label>
+              <select
+                value={fbScreen}
+                onChange={e => setFbScreen(e.target.value)}
+                className="w-full rounded-xl px-4 py-2.5 text-sm app-input"
+              >
+                <option value="">Select a screen...</option>
+                {APP_SCREENS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <motion.button
+              type="submit"
+              disabled={fbSending || !fbDescription.trim()}
+              className="text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-50 transition-colors"
+              style={{ backgroundColor: 'var(--primary)' }}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              {fbSending ? 'Sending...' : 'Send feedback'}
+            </motion.button>
+          </form>
         </motion.div>
 
         <motion.div className="rounded-2xl p-6" style={{ backgroundColor: 'var(--surface)', border: '1px solid rgba(220,38,38,0.3)' }} variants={cardItem}>

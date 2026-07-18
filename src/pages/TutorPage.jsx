@@ -3,11 +3,13 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
 import ReactMarkdown from 'react-markdown'
-import { BrainCircuit } from 'lucide-react'
+import { BrainCircuit, Flag } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
 import { chatMessage, fadeUp } from '../utils/animations'
+import SessionRatingModal from '../components/SessionRatingModal'
+import FlagResponseModal from '../components/FlagResponseModal'
 
 export default function TutorPage({ subject, subtopic, studentProfile, session, onBack, onComplete }) {
   const [messages, setMessages] = useState([])
@@ -23,8 +25,13 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
   const bottomRef = useRef(null)
   const [generatingNotes, setGeneratingNotes] = useState(false)
   const [notesSaved, setNotesSaved] = useState(false)
+  const [showRating, setShowRating] = useState(false)
+  const [flagTarget, setFlagTarget] = useState(null)
+  const startTimeRef = useRef(null)
+  const prevDurationRef = useRef(0)
 
   useEffect(() => {
+    startTimeRef.current = Date.now()
     loadOrCreateSession()
   }, [])
 
@@ -55,7 +62,8 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
         )
         const loadedMessages = visibleMessages.map(m => ({
           role: m.role === 'model' ? 'ai' : 'user',
-          text: m.content
+          text: m.content,
+          id: m.id
         }))
         const loadedHistory = previousMessages.map(m => ({
           role: m.role,
@@ -64,11 +72,13 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
         setMessages(loadedMessages)
         setHistory(loadedHistory)
         setSessionId(existingSession.id)
+        prevDurationRef.current = existingSession.duration_seconds || 0
         setLoadingSession(false)
         return
       }
 
       setSessionId(existingSession.id)
+      prevDurationRef.current = existingSession.duration_seconds || 0
       setLoadingSession(false)
       startSession(existingSession.id)
       return
@@ -90,8 +100,24 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
   }
 
   async function saveMessage(sid, role, content) {
-    await supabase.from('session_messages').insert({ session_id: sid, role, content })
+    const { data } = await supabase.from('session_messages').insert({ session_id: sid, role, content }).select('id').single()
     await supabase.from('tutor_sessions').update({ updated_at: new Date().toISOString() }).eq('id', sid)
+    return data?.id || null
+  }
+
+  async function markCompleted() {
+    if (!sessionId) return
+    const elapsed = startTimeRef.current ? Math.round((Date.now() - startTimeRef.current) / 1000) : 0
+    await supabase.from('tutor_sessions').update({
+      status: 'completed',
+      ended_at: new Date().toISOString(),
+      duration_seconds: prevDurationRef.current + elapsed,
+    }).eq('id', sessionId)
+  }
+
+  async function handleEndSession() {
+    await markCompleted()
+    setShowRating(true)
   }
 
   async function startSession(sid) {
@@ -102,9 +128,9 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
       const firstHistory = [{ role: 'user', parts: [{ text: openingPrompt }] }]
       const reply = await sendMessage(firstHistory, studentProfile)
       await saveMessage(sid, 'user', openingPrompt)
-      await saveMessage(sid, 'model', reply)
+      const replyId = await saveMessage(sid, 'model', reply)
       setHistory([...firstHistory, { role: 'model', parts: [{ text: reply }] }])
-      setMessages([{ role: 'ai', text: reply }])
+      setMessages([{ role: 'ai', text: reply, id: replyId }])
     } catch (e) {
       setError('Error: ' + e.message)
     }
@@ -127,7 +153,8 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
       setMessages([...newMessages, { role: 'ai', text: reply }])
       if (sessionId) {
         await saveMessage(sessionId, 'user', userText)
-        await saveMessage(sessionId, 'model', reply)
+        const replyId = await saveMessage(sessionId, 'model', reply)
+        setMessages(prev => prev.map((m, idx) => idx === prev.length - 1 ? { ...m, id: replyId } : m))
       }
       if (reply.includes('You have completed this subtopic')) {
         setQuizReady(true)
@@ -176,16 +203,45 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
   return (
     <div className="h-screen app-bg flex flex-col overflow-hidden">
 
+      <AnimatePresence>
+        {showRating && (
+          <SessionRatingModal
+            sessionId={sessionId}
+            userId={session.user.id}
+            onDone={() => { setShowRating(false); onBack() }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {flagTarget && (
+          <FlagResponseModal
+            sessionId={sessionId}
+            messageId={flagTarget.id}
+            messageText={flagTarget.text}
+            userId={session.user.id}
+            onClose={() => setFlagTarget(null)}
+          />
+        )}
+      </AnimatePresence>
+
       <div className="px-6 py-4 flex items-center gap-4 sticky top-0 z-10" style={{ backgroundColor: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
         <button onClick={onBack} aria-label="Go back" className="w-9 h-9 flex items-center justify-center rounded-xl text-base font-bold app-muted hover:opacity-80 transition-colors flex-shrink-0" style={{ border: '1px solid var(--border)' }}>←</button>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-bold app-heading truncate">{subtopic.title}</div>
           <div className="text-xs app-muted">{subject.name}</div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="hidden sm:flex items-center gap-2">
           <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--primary)' }} />
           <span className="text-xs font-medium" style={{ color: 'var(--primary)' }}>Athena active</span>
         </div>
+        <button
+          onClick={handleEndSession}
+          className="text-xs font-semibold px-3.5 py-2 rounded-xl transition-colors flex-shrink-0 app-muted hover:text-red-400"
+          style={{ border: '1px solid var(--border)' }}
+        >
+          End Session
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto scrollbar-hide px-4 py-6 max-w-3xl w-full mx-auto">
@@ -263,6 +319,16 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
                   </ReactMarkdown>
                 )}
               </div>
+              {msg.role === 'ai' && (
+                <button
+                  onClick={() => setFlagTarget({ id: msg.id || null, text: msg.text })}
+                  aria-label="Report this response"
+                  title="Report this response"
+                  className="self-end ml-1.5 mb-1 w-7 h-7 flex items-center justify-center rounded-lg flex-shrink-0 transition-colors app-muted hover:text-red-400"
+                >
+                  <Flag size={13} strokeWidth={2} />
+                </button>
+              )}
             </motion.div>
           ))}
         </AnimatePresence>
@@ -329,7 +395,7 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
                   transition={{ duration: 0.3 }}
                 >
                   <div className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--primary)' }}>
-                    📋 Session Summary
+                    Session Summary
                   </div>
                   <div className="text-xs leading-relaxed app-muted whitespace-pre-line mb-4">
                     {sessionSummary}
@@ -384,7 +450,7 @@ export default function TutorPage({ subject, subtopic, studentProfile, session, 
                   <div className="text-xs app-muted mt-0.5">Ready to test what you have learned?</div>
                 </div>
                 <motion.button
-                  onClick={onComplete}
+                  onClick={async () => { await markCompleted(); onComplete() }}
                   className="text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors flex-shrink-0 text-white"
                   style={{ backgroundColor: 'var(--primary)' }}
                   whileHover={{ scale: 1.03 }}

@@ -16,6 +16,7 @@ import { fadeUp, staggerContainer, cardItem, modalBackdrop, modalCard } from '..
 import { calculateStreak } from '../utils/streak'
 import { daysUntil as examCountdown } from '../utils/calendarUtils'
 import CalendarWidget from '../components/calendar/CalendarWidget'
+import ProgressPage from './ProgressPage'
 import {
   LayoutDashboard,
   BookOpen,
@@ -29,6 +30,8 @@ import {
   Microscope,
   BookMarked,
   FileText,
+  TrendingUp,
+  Flame,
 } from 'lucide-react'
 
 function daysUntil(dateStr) {
@@ -121,6 +124,7 @@ function BottomNav({ page, setPage }) {
     { id: 'dashboard', label: 'Home', icon: <LayoutDashboard size={20} strokeWidth={2} /> },
     { id: 'subjects', label: 'Subjects', icon: <BookOpen size={20} strokeWidth={2} />, domId: 'bottom-nav-subjects' },
     { id: 'notes', label: 'Notes', icon: <FileText size={20} strokeWidth={2} />, domId: 'bottom-nav-notes' },
+    { id: 'progress', label: 'Progress', icon: <TrendingUp size={20} strokeWidth={2} /> },
     { id: 'history', label: 'History', icon: <History size={20} strokeWidth={2} />, domId: 'bottom-nav-history' },
     { id: 'settings', label: 'Settings', icon: <Settings size={20} strokeWidth={2} /> },
   ]
@@ -177,6 +181,7 @@ function Sidebar({ page, setPage, profile, session, handleLogout }) {
           { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} strokeWidth={2} />, domId: 'nav-dashboard' },
           { id: 'subjects', label: 'My subjects', icon: <BookOpen size={18} strokeWidth={2} />, domId: 'nav-subjects' },
           { id: 'notes', label: 'My notes', icon: <FileText size={18} strokeWidth={2} />, domId: 'nav-notes' },
+          { id: 'progress', label: 'My progress', icon: <TrendingUp size={18} strokeWidth={2} />, domId: 'nav-progress' },
           { id: 'history', label: 'History', icon: <History size={18} strokeWidth={2} />, domId: 'nav-history' },
         ].map(item => (
           <button
@@ -429,6 +434,8 @@ export default function Dashboard({ session, darkMode, setDarkMode }) {
           <SubjectsPage subjects={subjects} subtopics={subtopics} getProgress={getProgress} toggleSubtopic={toggleSubtopic} onAddSubject={() => setPage('add')} onStudy={handleStudy} onDirectQuiz={handleDirectQuiz} onFlashcard={handleFlashcard} onEdit={handleEditSubject} onDelete={handleDeleteSubject} />
         ) : page === 'notes' ? (
           <NotesPage session={session} />
+        ) : page === 'progress' ? (
+          <ProgressPage session={session} />
         ) : page === 'history' ? (
           <HistoryPage session={session} onRetryQuiz={handleRetryQuiz} />
         ) : page === 'settings' ? (
@@ -497,7 +504,13 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, sess
           {
             label: 'Study streak',
             value: streak > 0 ? `${streak}` : '0',
-            sub: streak > 0 ? `${streak} day${streak > 1 ? 's' : ''} in a row` : 'Complete a quiz to start',
+            sub: streak >= 30 ? '30 days — incredible consistency'
+              : streak >= 14 ? 'Two weeks strong — keep going'
+              : streak >= 7 ? 'One full week — well done'
+              : streak >= 3 ? `${streak} days — momentum is building`
+              : streak > 0 ? `${streak} day${streak > 1 ? 's' : ''} in a row`
+              : 'Complete a quiz to start',
+            flame: streak > 0,
           },
         ].map(stat => (
           <motion.div
@@ -507,7 +520,10 @@ function DashboardHome({ subjects, subtopics, getProgress, profile, streak, sess
             variants={cardItem}
           >
             <div className="text-[10px] sm:text-xs font-medium uppercase tracking-wide mb-1 sm:mb-2 app-muted truncate">{stat.label}</div>
-            <div className="text-xl sm:text-3xl font-bold app-heading">{stat.value}</div>
+            <div className="text-xl sm:text-3xl font-bold app-heading flex items-center gap-1.5">
+              {stat.value}
+              {stat.flame && <Flame size={20} strokeWidth={2} className="text-amber-500" fill="currentColor" />}
+            </div>
             <div className="text-[10px] sm:text-xs mt-1 truncate" style={{ color: 'var(--primary)' }}>{stat.sub}</div>
           </motion.div>
         ))}
